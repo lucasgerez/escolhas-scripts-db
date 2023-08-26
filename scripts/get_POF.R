@@ -12,15 +12,13 @@
 # Caminho para os dados da POF: 
 setwd('F:/Drive/BASES DE DADOS BRUTOS/POF/Microdados/Dados')
 
-list.files()
-
 # Leitura dos arquivos oficiais
 
-# Para o load dos arquivos o setwd precisa localizar os arquivos em TXT
+# Abrindo a POF e salvando os arquivos no mesmo caminho em formato RDS
 source('../Leitura_microdados/R/Leitura dos Microdados - R.R')
 
-
-# Agr temos os dados salvos em formato rds para fácil leitura
+arquivos <- list.files()
+arquivos[grep('.rds', arquivos)]
 
 
 
