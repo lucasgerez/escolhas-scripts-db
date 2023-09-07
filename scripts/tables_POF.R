@@ -8,19 +8,56 @@
 # Para mais informações do que é a POF:
 # https://www.ibge.gov.br/estatisticas/sociais/trabalho/9050-pesquisa-de-orcamentos-familiares.html?=&t=o-que-e
 
+# Importante: A pesquisa tem como unidade de investigação o domicílio e é realizada por amostragem
+
+# O desenho atual da amostra da POF foi estruturado de tal modo que propicia a publicação de resultados
+# nos seguintes níveis: Brasil, Grandes Regiões, e também por situações urbana e rural.
+
 # Uma vez rodado o script get_pof.R, temos os microdados brutos e RDS
 
 # Caminho para os dados da POF: 
 setwd('F:/Drive/BASES DE DADOS BRUTOS/POF/Microdados/Dados')
 
+# pacotes
+library(dplyr)
 
 arquivos <- list.files()
 arquivos <- arquivos[grep('.rds', arquivos)]
 
+# Base de Consumo alimentar 
+consumo_alimentar <- readRDS("CONSUMO_ALIMENTAR.rds")
+rendimento_trabalho <- readRDS("RENDIMENTO_TRABALHO.rds")
+
+
+# PAREI AQUI
+
+# funcao para classificar os decis de renda
+
+classify_deciles <- function(data, income_variable) {
+  data <- data %>%
+    mutate(Decile = ntile({{ income_variable }}, 10))
+  return(data)
+}
+
+# Base com os rendimentos 
+pessoas_pof <- consumo_alimentar %>% 
+  group_by(UF, ESTRATO_POF, TIPO_SITUACAO_REG, COD_UPA, NUM_DOM, NUM_UC, COD_INFOR.MANTE, QUADRO ) %>%
+  summarise(RENDA_TOTAL = weighted.mean(RENDA_TOTAL, PESO_FINAL))
+
+classified_data <- classify_deciles(pessoas_pof, RENDA_TOTAL)
+
+summary(classified_data$Decile)
+
+
+# vamos investigar os quantis
+
+quantile(pessoas_pof$RENDA_TOTAL,.1)
+quantile(pessoas_pof$RENDA_TOTAL,.2)
+quantile(pessoas_pof$RENDA_TOTAL,.3)
+
 # Etapa 2: Gastos com alimento ------ 
 
-# Base de Consumo alimentar 
-readRDS("CONSUMO_ALIMENTAR.rds")
+head(consumo_alimentar)
 
 # Argumentos
 # Selecionando o Paraná
