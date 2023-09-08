@@ -8,6 +8,9 @@
 # Para mais informações do que é a POF:
 # https://www.ibge.gov.br/estatisticas/sociais/trabalho/9050-pesquisa-de-orcamentos-familiares.html?=&t=o-que-e
 
+# exemplo de tratamento da base
+# https://rpubs.com/amrofi/microdados_pof
+
 # Importante: A pesquisa tem como unidade de investigação o domicílio e é realizada por amostragem
 
 # O desenho atual da amostra da POF foi estruturado de tal modo que propicia a publicação de resultados
@@ -24,29 +27,166 @@ library(dplyr)
 arquivos <- list.files()
 arquivos <- arquivos[grep('.rds', arquivos)]
 
+
+# Exemplo com despesas com alimentação
+
+# Leitura do REGISTRO - CADERNETA COLETIVA (Questionario POF 3)
+caderneta_coletiva <- readRDS("CADERNETA_COLETIVA.rds")
+despesa_individual <- readRDS("DESPESA_INDIVIDUAL.rds")
+
+cad_coletiva <- transform(subset(transform(caderneta_coletiva, codigo = round(V9001/100)  # [1]
+), codigo < 86001 | codigo > 89999), valor_mensal = (V8000_DEFLA * FATOR_ANUALIZACAO *
+                                                       PESO_FINAL)/12  # [3] 
+)
+rm(caderneta_coletiva)  # para reduzir o uso da memoria
+
+desp_individual <- subset(transform(despesa_individual, codigo = round(V9001/100)  # [1]
+), QUADRO == 24 | codigo == 41001 | codigo == 48018 | codigo == 49075 |
+  codigo == 49089)  # [2]
+
+desp_individual <- transform(desp_individual, valor_mensal = ifelse(QUADRO == 24 |
+                                                                      QUADRO == 41, (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12, (V8000_DEFLA *
+                                                                                                                                          V9011 * FATOR_ANUALIZACAO * PESO_FINAL)/12)  # [3] 
+)
+rm(despesa_individual)
+
+
+# As duas tabelas precisam ter o mesmo conjunto de variaveis Identificacao dos
+# nomes das variaveis das tabelas a serem juntadas:
+nomes_cad <- names(cad_coletiva)
+nomes_desp <- names(desp_individual)
+
+# Identificacao das variaveis exclusivas a serem incluidas na outra tabela:
+incl_cad <- nomes_desp[!nomes_desp %in% nomes_cad]
+incl_desp <- nomes_cad[!nomes_cad %in% nomes_desp]
+
+# Criando uma tabela com NAs das variaveis ausentes em cada tabela
+col_ad_cad <- data.frame(matrix(NA, nrow(cad_coletiva), length(incl_cad)))
+names(col_ad_cad) <- incl_cad
+col_ad_desp <- data.frame(matrix(NA, nrow(desp_individual), length(incl_desp)))
+names(col_ad_desp) <- incl_desp
+
+# Acrescentando as colunas ausentes em cada tabela:
+cad_coletiva <- cbind(cad_coletiva, col_ad_cad)
+desp_individual <- cbind(desp_individual, col_ad_desp)
+
+# Juntando (empilhando) as tabelas com conjuntos de variaveis iguais
+junta_ali <- rbind(cad_coletiva, desp_individual)  # [1]
+
+morador_uc <- unique(readRDS("MORADOR.rds")[, c("UF", "ESTRATO_POF", "TIPO_SITUACAO_REG",
+                                                "COD_UPA", "NUM_DOM", "NUM_UC", "PESO_FINAL")  # Apenas variaveis com informacoes das UC's no arquivo 'MORADOR.rds'
+])  # Apenas um registro por UC
+
+
+head(morador_uc)
+
+soma_familia <- sum(morador_uc$PESO_FINAL)
+
+
+# A gente precisa achar essa tabela
+tradutor_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Alimentação.xls") 
+
+merge1 <- merge(junta_ali, tradutor_alimentacao, by.x = "codigo", by.y = "Codigo")  # [1]
+merge1 <- merge1[!is.na(merge1$valor_mensal), ]  # [2]
+
+# Somando os valores mensais de cada grupo de códigos, segundo cada nivel, conforme consta no tradutor
+soma_final_0 <- aggregate(valor_mensal ~ Nivel_0, data = merge1, sum)
+names(soma_final_0) <- c("nivel", "soma")
+
+soma_final_1 <- aggregate(valor_mensal ~ Nivel_1, data = merge1, sum)
+names(soma_final_1) <- c("nivel", "soma")
+
+soma_final_2 <- aggregate(valor_mensal ~ Nivel_2, data = merge1, sum)
+names(soma_final_2) <- c("nivel", "soma")
+
+soma_final_3 <- aggregate(valor_mensal ~ Nivel_3, data = merge1, sum)
+names(soma_final_3) <- c("nivel", "soma")
+
+
+# Empilhando as somas obtidas no passo anterior.
+soma_final <- rbind(soma_final_0, soma_final_1, soma_final_2, soma_final_3)  # [1]
+
+# Calculando a despesa média mensal de cada grupo de códigos, segundo cada nível, conforme consta no tradutor.
+merge2 <- data.frame(soma_final, soma_familia = soma_familia)
+merge2 <- transform(merge2, media_mensal = round(soma/soma_familia, 2))
+
+indice_alimentacao <- readxl::read_excel("indice_Alimentacao.xls")
+
+# Juntando o arquivo das despesas medias mensais de cada grupo de codigos com o
+# arquivo de indice, para organizar os itens da tabela
+
+merge3 <- merge(merge2, indice_alimentacao)
+merge3 <- merge3[order(merge3$Indice), c(5, 1, 6, 4)]  # [2]
+
+## TABELA FINAL -----
+print(merge3)
+
+
+
+# Leitura do REGISTRO - DESPESA INDIVIDUAL (Questionario POF 4)
+
+despesa_individual <- readRDS("DESPESA_INDIVIDUAL.rds")
+
 # Base de Consumo alimentar 
 consumo_alimentar <- readRDS("CONSUMO_ALIMENTAR.rds")
 rendimento_trabalho <- readRDS("RENDIMENTO_TRABALHO.rds")
 
 
-# PAREI AQUI
+# PAREI AQUI. Função dos decis ainda não está funcionando
 
 # funcao para classificar os decis de renda
 
 classify_deciles <- function(data, income_variable) {
   data <- data %>%
-    mutate(Decile = ntile({{ income_variable }}, 10))
+    mutate(Decile = ntile(income_variable, 10))
+  return(data)
+}
+
+classify_deciles <- function(data, income_variable) {
+  data <- data %>%
+    mutate(Decile = cut({{ income_variable }}, 
+                        breaks = quantile({{ income_variable }}, probs = seq(0, 1, 0.1), na.rm = TRUE), 
+                        labels = FALSE,
+                        include.lowest = TRUE))
+  return(data)
+}
+
+classify_deciles <- function(data, income_variable) {
+  data <- data %>%
+    mutate(Jittered_Income = {{ income_variable }} + runif(n())) %>%
+    mutate(Decile = cut(Jittered_Income, 
+                        breaks = quantile(Jittered_Income, probs = seq(0, 1, 0.1), na.rm = TRUE), 
+                        labels = FALSE,
+                        include.lowest = TRUE)) %>%
+    select(-Jittered_Income)
+  return(data)
+}
+
+classify_deciles <- function(data, income_variable) {
+  data <- data %>%
+    mutate(Decile = as.integer(rank({{ income_variable }}, ties.method = "min") / (n() / 10)))
   return(data)
 }
 
 # Base com os rendimentos 
 pessoas_pof <- consumo_alimentar %>% 
   group_by(UF, ESTRATO_POF, TIPO_SITUACAO_REG, COD_UPA, NUM_DOM, NUM_UC, COD_INFOR.MANTE, QUADRO ) %>%
-  summarise(RENDA_TOTAL = weighted.mean(RENDA_TOTAL, PESO_FINAL))
+  summarise(RENDA_TOTAL = weighted.mean(RENDA_TOTAL, PESO_FINAL)) %>%
+  classify_deciles(income_variable = RENDA_TOTAL)
 
-classified_data <- classify_deciles(pessoas_pof, RENDA_TOTAL)
+unique(pessoas_pof$Decile)
+
+
+pessoas_pof <- classify_deciles(pessoas_pof, RENDA_TOTAL)
 
 summary(classified_data$Decile)
+
+
+ntile(1:100, 10)
+
+
+classify_deciles(data.frame(var = 1:100), var)
+
 
 
 # vamos investigar os quantis
