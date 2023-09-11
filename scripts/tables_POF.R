@@ -132,68 +132,33 @@ consumo_alimentar <- readRDS("CONSUMO_ALIMENTAR.rds")
 rendimento_trabalho <- readRDS("RENDIMENTO_TRABALHO.rds")
 
 
-# PAREI AQUI. Função dos decis ainda não está funcionando
-
 # funcao para classificar os decis de renda
 
-classify_deciles <- function(data, income_variable) {
-  data <- data %>%
-    mutate(Decile = ntile(income_variable, 10))
+classify_deciles <- function(data, variable) {
+  
+  names(data)[which(names(data) == variable)] <- 'var'
+  
+  decis <- quantile(data$var, probs = seq(0,1,.1), na.rm = T) 
+  
+  cat('Distribuição dos decis:\n')
+  print(round(decis, 2))
+  
+  # Classificação dos decis 
+  
+  data$decis <- cut(data$var, breaks = decis, labels = F, include.lowest = T, na.pass = TRUE)
+  
+  names(data)[which(names(data) == 'var' )] <- variable
+  
   return(data)
 }
 
-classify_deciles <- function(data, income_variable) {
-  data <- data %>%
-    mutate(Decile = cut({{ income_variable }}, 
-                        breaks = quantile({{ income_variable }}, probs = seq(0, 1, 0.1), na.rm = TRUE), 
-                        labels = FALSE,
-                        include.lowest = TRUE))
-  return(data)
-}
-
-classify_deciles <- function(data, income_variable) {
-  data <- data %>%
-    mutate(Jittered_Income = {{ income_variable }} + runif(n())) %>%
-    mutate(Decile = cut(Jittered_Income, 
-                        breaks = quantile(Jittered_Income, probs = seq(0, 1, 0.1), na.rm = TRUE), 
-                        labels = FALSE,
-                        include.lowest = TRUE)) %>%
-    select(-Jittered_Income)
-  return(data)
-}
-
-classify_deciles <- function(data, income_variable) {
-  data <- data %>%
-    mutate(Decile = as.integer(rank({{ income_variable }}, ties.method = "min") / (n() / 10)))
-  return(data)
-}
-
-# Base com os rendimentos 
-pessoas_pof <- consumo_alimentar %>% 
+# PAREI AQUI. A princípio deu certo
+pessoas_pof <- 
+  consumo_alimentar %>% 
   group_by(UF, ESTRATO_POF, TIPO_SITUACAO_REG, COD_UPA, NUM_DOM, NUM_UC, COD_INFOR.MANTE, QUADRO ) %>%
   summarise(RENDA_TOTAL = weighted.mean(RENDA_TOTAL, PESO_FINAL)) %>%
-  classify_deciles(income_variable = RENDA_TOTAL)
+  classify_deciles(variable = 'RENDA_TOTAL')
 
-unique(pessoas_pof$Decile)
-
-
-pessoas_pof <- classify_deciles(pessoas_pof, RENDA_TOTAL)
-
-summary(classified_data$Decile)
-
-
-ntile(1:100, 10)
-
-
-classify_deciles(data.frame(var = 1:100), var)
-
-
-
-# vamos investigar os quantis
-
-quantile(pessoas_pof$RENDA_TOTAL,.1)
-quantile(pessoas_pof$RENDA_TOTAL,.2)
-quantile(pessoas_pof$RENDA_TOTAL,.3)
 
 # Etapa 2: Gastos com alimento ------ 
 
