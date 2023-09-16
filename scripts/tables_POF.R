@@ -28,7 +28,7 @@ arquivos <- list.files()
 arquivos <- arquivos[grep('.rds', arquivos)]
 
 
-# Passos que precisamos fazer -----
+# Igual a tabela3 do estudo de SP Passos que precisamos fazer -----
 
   # Calcular a renda per capita total
   # Calcular o decis de renda familiar per capita
@@ -38,10 +38,6 @@ arquivos <- arquivos[grep('.rds', arquivos)]
   # Calcular gasto mensal per capita com alimentação em casa
   # Calcular participação alimentação nas despesas de consumo
   # Calcular participação alimentação fora de casa no gasto alimentar
-
-
-
-
 
 
 
@@ -127,7 +123,9 @@ soma_final <- rbind(soma_final_0, soma_final_1, soma_final_2, soma_final_3)  # [
 merge2 <- data.frame(soma_final, soma_familia = soma_familia)
 merge2 <- transform(merge2, media_mensal = round(soma/soma_familia, 2))
 
-indice_alimentacao <- readxl::read_excel("indice_Alimentacao.xls")
+
+# Preciso atualizar aqui!!! 
+indice_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/indice_Alimentacao.xls")
 
 # Juntando o arquivo das despesas medias mensais de cada grupo de codigos com o
 # arquivo de indice, para organizar os itens da tabela
