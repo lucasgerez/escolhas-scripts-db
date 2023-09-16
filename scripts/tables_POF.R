@@ -28,7 +28,24 @@ arquivos <- list.files()
 arquivos <- arquivos[grep('.rds', arquivos)]
 
 
-# Exemplo com despesas com alimentação
+# Passos que precisamos fazer -----
+
+  # Calcular a renda per capita total
+  # Calcular o decis de renda familiar per capita
+  # Calcular despesa total mensal familiar per capita
+  # Calcular despesa em consumo mensal familiar per capita
+  # Calcular gasto mensal per capita com alimentação fora de casa
+  # Calcular gasto mensal per capita com alimentação em casa
+  # Calcular participação alimentação nas despesas de consumo
+  # Calcular participação alimentação fora de casa no gasto alimentar
+
+
+
+
+
+
+
+# Exemplo com despesas com alimentação -----
 
 # Leitura do REGISTRO - CADERNETA COLETIVA (Questionario POF 3)
 caderneta_coletiva <- readRDS("CADERNETA_COLETIVA.rds")
