@@ -18,6 +18,31 @@
 
 # Uma vez rodado o script get_pof.R, temos os microdados brutos e RDS
 
+# Arquivos de documentação
+# F:\Drive\BASES DE DADOS BRUTOS\POF\Microdados\Documentacao_20221226
+
+# Para mais informações sobre o dicionário das variáveis: 
+# Dicionários de váriaveis.xlsx
+
+# Para mais informações sobre os estratos: 
+# Estratos POF 2017-2018.xlsx
+# Para mais informações sobre os estratos: 
+# Estratos POF 2017-2018.xlsx
+  # ESTRATO_POF	Identifica os estratos do plano amostral da pesquisa: 
+  # estratificações Geográfica e Estatística. No nível geográfico, a estratificação compreende: 
+  # área urbana para o município da capital, resto da região metropolitana, resto da UF e área rural. 
+  # A estratificação estatística foi realizada a partir das definições implementadas na Amostra Mestra, 
+  # que utiliza informações da variável renda total do domicílio, obtida a partir dos dados do Censo 2010.  
+
+# Nota sobre os pesos: 
+# PESO: UPA a nível de domicilio
+# PESO_FINAL: já com os estratos
+
+
+# Para a tabela de renda per capita vamos utilizar a variável de renda monetária
+
+
+
 # Caminho para os dados da POF: 
 setwd('F:/Drive/BASES DE DADOS BRUTOS/POF/Microdados/Dados')
 
