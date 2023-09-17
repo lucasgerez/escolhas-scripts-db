@@ -48,6 +48,7 @@ setwd('F:/Drive/BASES DE DADOS BRUTOS/POF/Microdados/Dados')
 
 # pacotes
 library(dplyr)
+library(survey) # para mexer com os dados amostrais
 
 arquivos <- list.files()
 arquivos <- arquivos[grep('.rds', arquivos)]
@@ -55,14 +56,63 @@ arquivos <- arquivos[grep('.rds', arquivos)]
 
 # Igual a tabela3 do estudo de SP Passos que precisamos fazer -----
 
-  # Calcular a renda per capita total
-  # Calcular o decis de renda familiar per capita
+  # Calcular a renda per capita total (DONE)
+  # Calcular o decis de renda familiar per capita (DONE)
   # Calcular despesa total mensal familiar per capita
   # Calcular despesa em consumo mensal familiar per capita
   # Calcular gasto mensal per capita com alimentação fora de casa
   # Calcular gasto mensal per capita com alimentação em casa
   # Calcular participação alimentação nas despesas de consumo
   # Calcular participação alimentação fora de casa no gasto alimentar
+
+
+## Parâmetros para o estudo de Curitiba ----
+
+# UF Paraná com os estratos da capital e da região metropolitana
+uf <- 41; estrato_capital <- 4101:4105; estrato_rmct <- 4101:4108
+
+# vamos fazer um teste pra sp só pra checar (para testar com o estudo de sp)
+uf <- 35; estrato_capital <- 3501:3509; estrato_rmct <- 3501:3515
+
+# Para nível capital e RM teremos apenas na situação de área urbana
+tipo_situacao_dom <- 1
+
+# variaveis de identificação do domicílio (para as chaves)
+var_dom <- c("UF", "ESTRATO_POF", "TIPO_SITUACAO_REG",
+             "COD_UPA", "NUM_DOM", "NUM_UC")
+
+# calculando a renda per capita domiciliar (primeiro nomimal, depois deflacionamos para 2023)
+
+# Apenas variaveis com informacoes das UC's no arquivo 'MORADOR.rds'
+# Apenas um registro por UC
+morador_uc <- unique(readRDS("MORADOR.rds")[, c(var_dom, "PESO_FINAL", "PC_RENDA_MONET") ])  
+
+morador_df <- morador_uc %>% 
+  filter(UF == uf,
+         ESTRATO_POF %in% estrato_rmct) 
+
+# Vamos definir o dataframe como survey
+survey_design <- svydesign(ids = ~1, weights = ~PESO_FINAL, data = morador_df)
+
+# Calculate the weighted deciles
+deciles <- svyquantile(~PC_RENDA_MONET, 
+                       survey_design, 
+                       quantiles = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, .975))
+
+# Extract the deciles
+weighted_deciles <- deciles$PC_RENDA_MONET[,1] 
+
+survey_design$variables$decis <- cut(survey_design$variables$PC_RENDA_MONET, 
+                                     breaks = weighted_deciles,
+                                     labels = F, 
+                                     include.lowest = T, 
+                                     na.pass = TRUE)
+
+head(survey_design$variables)
+
+
+
+# ANTIGO ------------------------------------------------------------------
 
 
 
