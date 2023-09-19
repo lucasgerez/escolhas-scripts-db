@@ -174,11 +174,69 @@ despesa_individual <- cbind(despesa_individual, col_ad_desp)
 junta_ali <- rbind(caderneta_coletiva, despesa_individual)  # [1]
 
 
+# Vamos então atribuir a informção do decil da renda dom per capita para cada UC
+
+merge_decis <- survey_design$variables %>% rename(peso_df_morador = PESO_FINAL) %>% as.data.frame()
+
+# O total de familias deve ser calculado por decil
+soma_familia <- merge_decis %>% 
+  group_by(decis) %>%
+  summarise(soma_familia = sum(peso_df_morador)) %>%
+  filter(is.na(decis) == F)
+  
+
+junta_ali <- junta_ali %>% left_join(merge_decis, 
+                                     by = c('UF', 'ESTRATO_POF', 'TIPO_SITUACAO_REG', 'COD_UPA', 'NUM_DOM', 'NUM_UC')) 
 
 
-morador_df <- morador_uc %>% 
-  filter(UF == uf,
-         ESTRATO_POF %in% estrato_rmct) 
+# Feito isso, podemos verificar como está o gasto médio por decil
+
+# A gente precisa achar essa tabela
+tradutor_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Alimentação.xls") 
+
+merge1 <- merge(junta_ali, tradutor_alimentacao, by.x = "codigo", by.y = "Codigo")  # [1]
+merge1 <- merge1[!is.na(merge1$valor_mensal), ]  # [2]
+
+
+### Tabelas alimentação ----- 
+
+# Gastos com alimentação por decil
+merge1 %>% 
+  group_by(decis) %>%
+  summarise( valor_mensal = sum(valor_mensal) ) %>% 
+  left_join(soma_familia, by = 'decis') %>%
+  mutate( valor_mensal = valor_mensal/soma_familia  )
+
+
+
+
+# PAREI AQUI --------------------------------------------------------------
+
+
+
+
+
+# Somando os valores mensais de cada grupo de códigos, segundo cada nivel, conforme consta no tradutor
+soma_final_0 <- aggregate(valor_mensal ~ Nivel_0, data = merge1, sum)
+names(soma_final_0) <- c("nivel", "soma")
+
+soma_final_1 <- aggregate(valor_mensal ~ Nivel_1, data = merge1, sum)
+names(soma_final_1) <- c("nivel", "soma")
+
+soma_final_2 <- aggregate(valor_mensal ~ Nivel_2, data = merge1, sum)
+names(soma_final_2) <- c("nivel", "soma")
+
+soma_final_3 <- aggregate(valor_mensal ~ Nivel_3, data = merge1, sum)
+names(soma_final_3) <- c("nivel", "soma")
+
+
+# Empilhando as somas obtidas no passo anterior.
+soma_final <- rbind(soma_final_0, soma_final_1, soma_final_2, soma_final_3)  # [1]
+
+# Calculando a despesa média mensal de cada grupo de códigos, segundo cada nível, conforme consta no tradutor.
+merge2 <- data.frame(soma_final, soma_familia = soma_familia)
+merge2 <- transform(merge2, media_mensal = round(soma/soma_familia, 2))
+
 
 
 
