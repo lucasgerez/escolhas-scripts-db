@@ -72,7 +72,7 @@ arquivos <- arquivos[grep('.rds', arquivos)]
 uf <- 41; estrato_capital <- 4101:4105; estrato_rmct <- 4101:4108
 
 # vamos fazer um teste pra sp só pra checar (para testar com o estudo de sp)
-uf <- 35; estrato_capital <- 3501:3509; estrato_rmct <- 3501:3515
+# uf <- 35; estrato_capital <- 3501:3509; estrato_rmct <- 3501:3515
 
 # Para nível capital e RM teremos apenas na situação de área urbana
 tipo_situacao_dom <- 1
@@ -81,12 +81,17 @@ tipo_situacao_dom <- 1
 var_dom <- c("UF", "ESTRATO_POF", "TIPO_SITUACAO_REG",
              "COD_UPA", "NUM_DOM", "NUM_UC")
 
-# calculando a renda per capita domiciliar (primeiro nomimal, depois deflacionamos para 2023)
+
+### Tabela final com os resultados
+tab_final <- data.frame(decis_renda = 1:10)
+
+## calculando a renda per capita domiciliar (primeiro nomimal, depois deflacionamos para 2023) ----
 
 # Apenas variaveis com informacoes das UC's no arquivo 'MORADOR.rds'
 # Apenas um registro por UC
 morador_uc <- unique(readRDS("MORADOR.rds")[, c(var_dom, "PESO_FINAL", "PC_RENDA_MONET") ])  
 
+# Retringindo para a região de interesse
 morador_df <- morador_uc %>% 
   filter(UF == uf,
          ESTRATO_POF %in% estrato_rmct) 
@@ -97,10 +102,17 @@ survey_design <- svydesign(ids = ~1, weights = ~PESO_FINAL, data = morador_df)
 # Calculate the weighted deciles
 deciles <- svyquantile(~PC_RENDA_MONET, 
                        survey_design, 
-                       quantiles = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, .975))
+                       quantiles = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1))
 
 # Extract the deciles
 weighted_deciles <- deciles$PC_RENDA_MONET[,1] 
+
+
+# Inserindo na tabela final 
+tab_final$renda_dom_pc <- paste0("R$ ", round(weighted_deciles[-1],0))
+tab_final$renda_dom_pc[1] <- paste0("Até ", tab_final$renda_dom_pc[1])
+tab_final$renda_dom_pc[10] <- paste0("Acima de ", tab_final$renda_dom_pc[9])
+
 
 survey_design$variables$decis <- cut(survey_design$variables$PC_RENDA_MONET, 
                                      breaks = weighted_deciles,
