@@ -107,7 +107,6 @@ deciles <- svyquantile(~PC_RENDA_MONET,
 # Extract the deciles
 weighted_deciles <- deciles$PC_RENDA_MONET[,1] 
 
-
 # Inserindo na tabela final 
 tab_final$renda_dom_pc <- paste0("R$ ", round(weighted_deciles[-1],0))
 tab_final$renda_dom_pc[1] <- paste0("Até ", tab_final$renda_dom_pc[1])
@@ -121,6 +120,70 @@ survey_design$variables$decis <- cut(survey_design$variables$PC_RENDA_MONET,
                                      na.pass = TRUE)
 
 head(survey_design$variables)
+
+
+# Calculo das despesas com alimentação ----- 
+
+# Leitura do REGISTRO - CADERNETA COLETIVA (Questionario POF 3)
+caderneta_coletiva <- readRDS("CADERNETA_COLETIVA.rds")
+despesa_individual <- readRDS("DESPESA_INDIVIDUAL.rds")
+
+
+caderneta_coletiva <- 
+  caderneta_coletiva %>%
+  mutate(codigo = round(V9001/100), # 5 dígitos
+         valor_mensal = (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12) %>%
+  filter(UF == uf, 
+         ESTRATO_POF %in% estrato_rmct, # filtro para a região de interesse
+         codigo < 86001 | codigo > 89999 )  %>% 
+  as.data.frame()
+
+despesa_individual <- 
+  despesa_individual %>%
+  mutate(codigo = round(V9001/100), # 5 dígitos
+         valor_mensal = ifelse(QUADRO %in% c(24,41), 
+                               (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12, 
+                               (V8000_DEFLA * V9011 * FATOR_ANUALIZACAO * PESO_FINAL)/12)) %>%
+  filter(UF == uf, 
+         ESTRATO_POF %in% estrato_rmct, # filtro para a região de interesse
+         QUADRO == 24 | codigo %in% c(41001, 48018, 49075, 49089)
+         )  %>% 
+  as.data.frame()
+
+
+# As duas tabelas precisam ter o mesmo conjunto de variaveis Identificacao dos
+# nomes das variaveis das tabelas a serem juntadas:
+nomes_cad <- names(caderneta_coletiva)
+nomes_desp <- names(despesa_individual)
+
+# Identificacao das variaveis exclusivas a serem incluidas na outra tabela:
+incl_cad <- nomes_desp[!nomes_desp %in% nomes_cad]
+incl_desp <- nomes_cad[!nomes_cad %in% nomes_desp]
+
+# Criando uma tabela com NAs das variaveis ausentes em cada tabela
+col_ad_cad <- data.frame(matrix(NA, nrow(caderneta_coletiva), length(incl_cad)))
+names(col_ad_cad) <- incl_cad
+col_ad_desp <- data.frame(matrix(NA, nrow(despesa_individual), length(incl_desp)))
+names(col_ad_desp) <- incl_desp
+
+# Acrescentando as colunas ausentes em cada tabela:
+caderneta_coletiva <- cbind(caderneta_coletiva, col_ad_cad)
+despesa_individual <- cbind(despesa_individual, col_ad_desp)
+
+# Juntando (empilhando) as tabelas com conjuntos de variaveis iguais
+junta_ali <- rbind(caderneta_coletiva, despesa_individual)  # [1]
+
+
+
+
+morador_df <- morador_uc %>% 
+  filter(UF == uf,
+         ESTRATO_POF %in% estrato_rmct) 
+
+
+
+
+
 
 
 
