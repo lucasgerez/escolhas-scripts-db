@@ -66,6 +66,13 @@ arquivos <- arquivos[grep('.rds', arquivos)]
   # Calcular participação alimentação fora de casa no gasto alimentar
 
 
+format_real <- function(numero) {
+  
+  options(warn = -1)
+  return( paste0("R$ ", prettyNum(round(numero,0), big.mark = ".", small.mark = ",")) )
+  
+}
+  
 ## Parâmetros para o estudo de Curitiba ----
 
 # UF Paraná com os estratos da capital e da região metropolitana
@@ -91,6 +98,7 @@ tab_final <- data.frame(decis_renda = 1:10)
 # Apenas um registro por UC
 morador_uc <- unique(readRDS("MORADOR.rds")[, c(var_dom, "PESO_FINAL", "PC_RENDA_MONET") ])  
 
+
 # Retringindo para a região de interesse
 morador_df <- morador_uc %>% 
   filter(UF == uf,
@@ -107,8 +115,11 @@ deciles <- svyquantile(~PC_RENDA_MONET,
 # Extract the deciles
 weighted_deciles <- deciles$PC_RENDA_MONET[,1] 
 
+
+
+
 # Inserindo na tabela final 
-tab_final$renda_dom_pc <- paste0("R$ ", round(weighted_deciles[-1],0))
+tab_final$renda_dom_pc <- paste0("R$ ", prettyNum(round(weighted_deciles[-1],0),big.mark = ".", small.mark = ","))
 tab_final$renda_dom_pc[1] <- paste0("Até ", tab_final$renda_dom_pc[1])
 tab_final$renda_dom_pc[10] <- paste0("Acima de ", tab_final$renda_dom_pc[9])
 
@@ -122,60 +133,57 @@ survey_design$variables$decis <- cut(survey_design$variables$PC_RENDA_MONET,
 head(survey_design$variables)
 
 
-# Calculo das despesas com alimentação ----- 
+# Dados de despesa ---- 
 
-# Leitura do REGISTRO - CADERNETA COLETIVA (Questionario POF 3)
+
+# Calculo das despesas total ----- 
+
+
+# Calculo das despesas com alimentação ----- 
 caderneta_coletiva <- readRDS("CADERNETA_COLETIVA.rds")
+despesa_coletiva <- readRDS("DESPESA_COLETIVA.rds") # vai quadro 6 a 19 
 despesa_individual <- readRDS("DESPESA_INDIVIDUAL.rds")
 
 
+## Tratamento das variáveis ---- 
 caderneta_coletiva <- 
   caderneta_coletiva %>%
-  mutate(codigo = round(V9001/100), # 5 dígitos
+  mutate(Codigo = round(V9001/100), # 5 dígitos
          valor_mensal = (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12) %>%
   filter(UF == uf, 
          ESTRATO_POF %in% estrato_rmct, # filtro para a região de interesse
-         codigo < 86001 | codigo > 89999 )  %>% 
+         Codigo < 86001 | Codigo > 89999 )  %>% 
   as.data.frame()
+
+despesa_coletiva <- 
+  despesa_coletiva %>%
+  mutate(Codigo = round(V9001/100), # 5 dígitos
+         valor_mensal = ifelse(QUADRO %in% c(10,19),
+                               (V8000_DEFLA * V9011 * FATOR_ANUALIZACAO * PESO_FINAL)/12,
+                               (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12 
+                               )) %>%
+  filter(UF == uf, 
+         ESTRATO_POF %in% estrato_rmct)  %>% 
+  as.data.frame()
+
 
 despesa_individual <- 
   despesa_individual %>%
-  mutate(codigo = round(V9001/100), # 5 dígitos
+  mutate(Codigo = round(V9001/100), # 5 dígitos
          valor_mensal = ifelse(QUADRO %in% c(24,41), 
                                (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12, 
                                (V8000_DEFLA * V9011 * FATOR_ANUALIZACAO * PESO_FINAL)/12)) %>%
   filter(UF == uf, 
          ESTRATO_POF %in% estrato_rmct, # filtro para a região de interesse
-         QUADRO == 24 | codigo %in% c(41001, 48018, 49075, 49089)
+         QUADRO == 24 | Codigo %in% c(41001, 48018, 49075, 49089)
          )  %>% 
   as.data.frame()
 
-
-# As duas tabelas precisam ter o mesmo conjunto de variaveis Identificacao dos
-# nomes das variaveis das tabelas a serem juntadas:
-nomes_cad <- names(caderneta_coletiva)
-nomes_desp <- names(despesa_individual)
-
-# Identificacao das variaveis exclusivas a serem incluidas na outra tabela:
-incl_cad <- nomes_desp[!nomes_desp %in% nomes_cad]
-incl_desp <- nomes_cad[!nomes_cad %in% nomes_desp]
-
-# Criando uma tabela com NAs das variaveis ausentes em cada tabela
-col_ad_cad <- data.frame(matrix(NA, nrow(caderneta_coletiva), length(incl_cad)))
-names(col_ad_cad) <- incl_cad
-col_ad_desp <- data.frame(matrix(NA, nrow(despesa_individual), length(incl_desp)))
-names(col_ad_desp) <- incl_desp
-
-# Acrescentando as colunas ausentes em cada tabela:
-caderneta_coletiva <- cbind(caderneta_coletiva, col_ad_cad)
-despesa_individual <- cbind(despesa_individual, col_ad_desp)
-
-# Juntando (empilhando) as tabelas com conjuntos de variaveis iguais
-junta_ali <- rbind(caderneta_coletiva, despesa_individual)  # [1]
+# Vamos juntar as 3 tabelas para calcular a depesa total
+gastos_all <- bind_rows(caderneta_coletiva,despesa_coletiva, despesa_individual)
 
 
 # Vamos então atribuir a informção do decil da renda dom per capita para cada UC
-
 merge_decis <- survey_design$variables %>% rename(peso_df_morador = PESO_FINAL) %>% as.data.frame()
 
 # O total de familias deve ser calculado por decil
@@ -184,212 +192,97 @@ soma_familia <- merge_decis %>%
   summarise(soma_familia = sum(peso_df_morador)) %>%
   filter(is.na(decis) == F)
   
-
-junta_ali <- junta_ali %>% left_join(merge_decis, 
+# Atribuição das informações de decis na tabela de despesas totais
+gastos_all <- gastos_all %>% left_join(merge_decis, 
                                      by = c('UF', 'ESTRATO_POF', 'TIPO_SITUACAO_REG', 'COD_UPA', 'NUM_DOM', 'NUM_UC')) 
 
 
-# Feito isso, podemos verificar como está o gasto médio por decil
+### Tabelas de tradutores
 
-# A gente precisa achar essa tabela
+# Tadutores de despesa geral 
+tradutor_desp_geral <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Despesa_Geral.xls") 
+
+# Vamos ficar com os ids unicos
+tradutor_desp_geral <- tradutor_desp_geral[duplicated(tradutor_desp_geral$Codigo)==F,]
+
+
+# Informação de alimentação 
 tradutor_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Alimentação.xls") 
 
-merge1 <- merge(junta_ali, tradutor_alimentacao, by.x = "codigo", by.y = "Codigo")  # [1]
-merge1 <- merge1[!is.na(merge1$valor_mensal), ]  # [2]
 
+# Tabela com despesa total 
 
-### Tabelas alimentação ----- 
+# Tem alguma possível dupla contagem aqui das depesas gerais com as demais
 
-# Gastos com alimentação por decil
-merge1 %>% 
+# Gastos totais por decil
+tab1 <- 
+  gastos_all %>% 
+  left_join(tradutor_desp_geral, by = "Codigo") %>%
+  filter(Descricao_0 == 'Despesa Total') %>%
   group_by(decis) %>%
   summarise( valor_mensal = sum(valor_mensal) ) %>% 
   left_join(soma_familia, by = 'decis') %>%
-  mutate( valor_mensal = valor_mensal/soma_familia  )
+  mutate( valor_mensal = format_real(valor_mensal/soma_familia)  ) %>%
+  filter(is.na(decis)==F) %>%
+  rename(despesa_total = valor_mensal,
+         decis_renda = decis) %>%
+  select(decis_renda, despesa_total)
+
+
+# Para Despesas em Consumo vams aplicar filter(Descricao_2 == 'Despesas de Consumo')
+tab2 <- 
+  gastos_all %>% 
+  left_join(tradutor_desp_geral, by = "Codigo") %>%
+  filter(Descricao_2 == 'Despesas de Consumo') %>%
+  group_by(decis) %>%
+  summarise( valor_mensal = sum(valor_mensal) ) %>% 
+  left_join(soma_familia, by = 'decis') %>%
+  mutate( valor_mensal = format_real(valor_mensal/soma_familia)  ) %>%
+  filter(is.na(decis)==F) %>%
+  rename(despesa_consumo = valor_mensal,
+         decis_renda = decis) %>%
+  select(decis_renda, despesa_consumo)
+
+# Despesas em Alimentação (acho q aqui vale fazer pelo tab_alimentação)
+tab3 <- 
+  gastos_all %>% 
+  left_join(tradutor_alimentacao, by = "Codigo") %>%
+  filter(Descricao_0 == 'Alimentacao') %>%
+  filter(is.na(Descricao_1) == F) %>%
+  group_by(decis) %>%
+  summarise( valor_mensal = sum(valor_mensal) ) %>% 
+  left_join(soma_familia, by = 'decis') %>%
+  mutate( valor_mensal = format_real(valor_mensal/soma_familia)  ) %>%
+  filter(is.na(decis)==F) %>%
+  rename(despesa_alimentacao = valor_mensal,
+         decis_renda = decis) %>%
+  select(decis_renda, despesa_alimentacao)
+
+# Alimentação fora do domicilio
+tab4 <- 
+  gastos_all %>% 
+  left_join(tradutor_alimentacao, by = "Codigo") %>%
+  filter(Descricao_1 == 'Alimentação fora do domicílio') %>%
+  filter(is.na(Descricao_1) == F) %>%
+  group_by(decis) %>%
+  summarise( valor_mensal = sum(valor_mensal) ) %>% 
+  left_join(soma_familia, by = 'decis') %>%
+  mutate( valor_mensal = format_real(valor_mensal/soma_familia)  ) %>%
+  filter(is.na(decis)==F) %>%
+  rename(despesa_alimentacao_fora_domicilio = valor_mensal,
+         decis_renda = decis) %>%
+  select(decis_renda, despesa_alimentacao_fora_domicilio)
+
+
+tab_final %>% 
+  left_join(tab1, by = 'decis_renda') %>%
+  left_join(tab2, by = 'decis_renda') %>%
+  left_join(tab3, by = 'decis_renda') %>%
+  left_join(tab4, by = 'decis_renda') 
+   
 
 
 
-
-# PAREI AQUI --------------------------------------------------------------
-
-
-
-
-
-# Somando os valores mensais de cada grupo de códigos, segundo cada nivel, conforme consta no tradutor
-soma_final_0 <- aggregate(valor_mensal ~ Nivel_0, data = merge1, sum)
-names(soma_final_0) <- c("nivel", "soma")
-
-soma_final_1 <- aggregate(valor_mensal ~ Nivel_1, data = merge1, sum)
-names(soma_final_1) <- c("nivel", "soma")
-
-soma_final_2 <- aggregate(valor_mensal ~ Nivel_2, data = merge1, sum)
-names(soma_final_2) <- c("nivel", "soma")
-
-soma_final_3 <- aggregate(valor_mensal ~ Nivel_3, data = merge1, sum)
-names(soma_final_3) <- c("nivel", "soma")
-
-
-# Empilhando as somas obtidas no passo anterior.
-soma_final <- rbind(soma_final_0, soma_final_1, soma_final_2, soma_final_3)  # [1]
-
-# Calculando a despesa média mensal de cada grupo de códigos, segundo cada nível, conforme consta no tradutor.
-merge2 <- data.frame(soma_final, soma_familia = soma_familia)
-merge2 <- transform(merge2, media_mensal = round(soma/soma_familia, 2))
-
-
-
-
-
-
-
-
-
-# ANTIGO ------------------------------------------------------------------
-
-
-
-# Exemplo com despesas com alimentação -----
-
-# Leitura do REGISTRO - CADERNETA COLETIVA (Questionario POF 3)
-caderneta_coletiva <- readRDS("CADERNETA_COLETIVA.rds")
-despesa_individual <- readRDS("DESPESA_INDIVIDUAL.rds")
-
-cad_coletiva <- transform(subset(transform(caderneta_coletiva, codigo = round(V9001/100)  # [1]
-), codigo < 86001 | codigo > 89999), valor_mensal = (V8000_DEFLA * FATOR_ANUALIZACAO *
-                                                       PESO_FINAL)/12  # [3] 
-)
-rm(caderneta_coletiva)  # para reduzir o uso da memoria
-
-desp_individual <- subset(transform(despesa_individual, codigo = round(V9001/100)  # [1]
-), QUADRO == 24 | codigo == 41001 | codigo == 48018 | codigo == 49075 |
-  codigo == 49089)  # [2]
-
-desp_individual <- transform(desp_individual, valor_mensal = ifelse(QUADRO == 24 |
-                                                                      QUADRO == 41, (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12, (V8000_DEFLA *
-                                                                                                                                          V9011 * FATOR_ANUALIZACAO * PESO_FINAL)/12)  # [3] 
-)
-rm(despesa_individual)
-
-
-# As duas tabelas precisam ter o mesmo conjunto de variaveis Identificacao dos
-# nomes das variaveis das tabelas a serem juntadas:
-nomes_cad <- names(cad_coletiva)
-nomes_desp <- names(desp_individual)
-
-# Identificacao das variaveis exclusivas a serem incluidas na outra tabela:
-incl_cad <- nomes_desp[!nomes_desp %in% nomes_cad]
-incl_desp <- nomes_cad[!nomes_cad %in% nomes_desp]
-
-# Criando uma tabela com NAs das variaveis ausentes em cada tabela
-col_ad_cad <- data.frame(matrix(NA, nrow(cad_coletiva), length(incl_cad)))
-names(col_ad_cad) <- incl_cad
-col_ad_desp <- data.frame(matrix(NA, nrow(desp_individual), length(incl_desp)))
-names(col_ad_desp) <- incl_desp
-
-# Acrescentando as colunas ausentes em cada tabela:
-cad_coletiva <- cbind(cad_coletiva, col_ad_cad)
-desp_individual <- cbind(desp_individual, col_ad_desp)
-
-# Juntando (empilhando) as tabelas com conjuntos de variaveis iguais
-junta_ali <- rbind(cad_coletiva, desp_individual)  # [1]
-
-morador_uc <- unique(readRDS("MORADOR.rds")[, c("UF", "ESTRATO_POF", "TIPO_SITUACAO_REG",
-                                                "COD_UPA", "NUM_DOM", "NUM_UC", "PESO_FINAL")  # Apenas variaveis com informacoes das UC's no arquivo 'MORADOR.rds'
-])  # Apenas um registro por UC
-
-
-head(morador_uc)
-
-soma_familia <- sum(morador_uc$PESO_FINAL)
-
-
-# A gente precisa achar essa tabela
-tradutor_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Alimentação.xls") 
-
-merge1 <- merge(junta_ali, tradutor_alimentacao, by.x = "codigo", by.y = "Codigo")  # [1]
-merge1 <- merge1[!is.na(merge1$valor_mensal), ]  # [2]
-
-# Somando os valores mensais de cada grupo de códigos, segundo cada nivel, conforme consta no tradutor
-soma_final_0 <- aggregate(valor_mensal ~ Nivel_0, data = merge1, sum)
-names(soma_final_0) <- c("nivel", "soma")
-
-soma_final_1 <- aggregate(valor_mensal ~ Nivel_1, data = merge1, sum)
-names(soma_final_1) <- c("nivel", "soma")
-
-soma_final_2 <- aggregate(valor_mensal ~ Nivel_2, data = merge1, sum)
-names(soma_final_2) <- c("nivel", "soma")
-
-soma_final_3 <- aggregate(valor_mensal ~ Nivel_3, data = merge1, sum)
-names(soma_final_3) <- c("nivel", "soma")
-
-
-# Empilhando as somas obtidas no passo anterior.
-soma_final <- rbind(soma_final_0, soma_final_1, soma_final_2, soma_final_3)  # [1]
-
-# Calculando a despesa média mensal de cada grupo de códigos, segundo cada nível, conforme consta no tradutor.
-merge2 <- data.frame(soma_final, soma_familia = soma_familia)
-merge2 <- transform(merge2, media_mensal = round(soma/soma_familia, 2))
-
-
-# Preciso atualizar aqui!!! 
-indice_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/indice_Alimentacao.xls")
-
-# Juntando o arquivo das despesas medias mensais de cada grupo de codigos com o
-# arquivo de indice, para organizar os itens da tabela
-
-merge3 <- merge(merge2, indice_alimentacao)
-merge3 <- merge3[order(merge3$Indice), c(5, 1, 6, 4)]  # [2]
-
-## TABELA FINAL -----
-print(merge3)
-
-
-
-# Leitura do REGISTRO - DESPESA INDIVIDUAL (Questionario POF 4)
-
-despesa_individual <- readRDS("DESPESA_INDIVIDUAL.rds")
-
-# Base de Consumo alimentar 
-consumo_alimentar <- readRDS("CONSUMO_ALIMENTAR.rds")
-rendimento_trabalho <- readRDS("RENDIMENTO_TRABALHO.rds")
-
-
-# funcao para classificar os decis de renda
-
-classify_deciles <- function(data, variable) {
-  
-  names(data)[which(names(data) == variable)] <- 'var'
-  
-  decis <- quantile(data$var, probs = seq(0,1,.1), na.rm = T) 
-  
-  cat('Distribuição dos decis:\n')
-  print(round(decis, 2))
-  
-  # Classificação dos decis 
-  
-  data$decis <- cut(data$var, breaks = decis, labels = F, include.lowest = T, na.pass = TRUE)
-  
-  names(data)[which(names(data) == 'var' )] <- variable
-  
-  return(data)
-}
-
-# PAREI AQUI. A princípio deu certo
-pessoas_pof <- 
-  consumo_alimentar %>% 
-  group_by(UF, ESTRATO_POF, TIPO_SITUACAO_REG, COD_UPA, NUM_DOM, NUM_UC, COD_INFOR.MANTE, QUADRO ) %>%
-  summarise(RENDA_TOTAL = weighted.mean(RENDA_TOTAL, PESO_FINAL)) %>%
-  classify_deciles(variable = 'RENDA_TOTAL')
-
-
-# Etapa 2: Gastos com alimento ------ 
-
-head(consumo_alimentar)
-
-# Argumentos
-# Selecionando o Paraná
-uf <- 41
 
 # Tabelas requeridas pelo Pedro
 
