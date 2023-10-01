@@ -41,48 +41,54 @@
 
 # Para a tabela de renda per capita vamos utilizar a variável de renda monetária
 
-
-
 # Caminho para os dados da POF: 
 setwd('F:/Drive/BASES DE DADOS BRUTOS/POF/Microdados/Dados')
+
+# Caminho para exportar as tabelas
+export <- 'F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Resultados/POF'
+
 
 # pacotes
 library(dplyr)
 library(survey) # para mexer com os dados amostrais
+library(writexl)
 
 arquivos <- list.files()
 arquivos <- arquivos[grep('.rds', arquivos)]
 
 
-# Igual a tabela3 do estudo de SP Passos que precisamos fazer -----
-
-  # Calcular a renda per capita total (DONE)
-  # Calcular o decis de renda familiar per capita (DONE)
-  # Calcular despesa total mensal familiar per capita
-  # Calcular despesa em consumo mensal familiar per capita
-  # Calcular gasto mensal per capita com alimentação fora de casa
-  # Calcular gasto mensal per capita com alimentação em casa
-  # Calcular participação alimentação nas despesas de consumo
-  # Calcular participação alimentação fora de casa no gasto alimentar
-
-
+# Funcao com formatação para a tabela
 format_real <- function(numero) {
   
   options(warn = -1)
   return( paste0("R$ ", prettyNum(round(numero,0), big.mark = ".", small.mark = ",")) )
   
 }
+
+
+# Igual a tabela3 do estudo de SP Passos que precisamos fazer -----
+
+# Calcular a renda per capita total (DONE)
+# Calcular o decis de renda familiar per capita (DONE)
+# Calcular despesa total mensal familiar per capita
+# Calcular despesa em consumo mensal familiar per capita
+# Calcular gasto mensal per capita com alimentação fora de casa
+# Calcular gasto mensal per capita com alimentação em casa
+# Calcular participação alimentação nas despesas de consumo
+# Calcular participação alimentação fora de casa no gasto alimentar
+
+
   
 ## Parâmetros para o estudo de Curitiba ----
 
-# UF Paraná com os estratos da capital e da região metropolitana
-uf <- 41; estrato_capital <- 4101:4105; estrato <- 4101:4108
-
-# vamos fazer um teste pra sp só pra checar (para testar com o estudo de sp)
-# uf <- 35; estrato_capital <- 3501:3509; estrato <- 3501:3515
-
-# Para nível capital e RM teremos apenas na situação de área urbana
-tipo_situacao_dom <- 1
+# Vamos definir os conjuntos de estrados para ficar mais fácil nas funções
+uf                          <- 41 
+estrato_uf_com_rural        <- 4101:4135
+estrato_uf_sem_rural        <- 4101:4124
+estrato_uf_sem_rm_sem_rural <- 4108:4124
+estrato_rm                  <- 4101:4108
+estrato_rm_sem_capital      <- 4106:4108
+estrato_capital             <- 4101:4105
 
 
 # Ainda precisamos melhorar essa funcao
@@ -104,12 +110,14 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   # Apenas um registro por UC
   
   num_pessoas <- readRDS("MORADOR.rds") %>% 
+    filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
     group_by(UF, ESTRATO_POF, TIPO_SITUACAO_REG,
              COD_UPA, NUM_DOM, NUM_UC) %>% 
     summarise(pessoas_dom = max(COD_INFORMANTE))
   
   # Atribuindo o número de pessoas da familia
   morador_uc <- unique(readRDS("MORADOR.rds")[, c(var_dom, "PESO_FINAL", "PC_RENDA_MONET") ]) %>%
+    filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
     left_join(num_pessoas, by = var_dom)
   
   # Retringindo para a região de interesse
@@ -173,6 +181,7 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
            valor_mensal = (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12) %>%
     filter(UF == uf, 
            ESTRATO_POF %in% estrato, # filtro para a região de interesse
+           TIPO_SITUACAO_REG %in% tipo_situacao_dom,
            Codigo < 86001 | Codigo > 89999 )  %>% 
     as.data.frame()
   
@@ -184,7 +193,8 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
                                  (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12 
            )) %>%
     filter(UF == uf, 
-           ESTRATO_POF %in% estrato)  %>% 
+           ESTRATO_POF %in% estrato,
+           TIPO_SITUACAO_REG %in% tipo_situacao_dom)  %>% 
     as.data.frame()
   
   despesa_individual <- 
@@ -195,18 +205,21 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
                                  (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12)) %>%
     filter(UF == uf, 
            ESTRATO_POF %in% estrato, # filtro para a região de interesse
+           TIPO_SITUACAO_REG %in% tipo_situacao_dom
     )  %>% 
     as.data.frame()
   
   # Ainda em habitação faltam alguns detalhes possivelmente relacionados ao fator de anualização
   aluguel <- aluguel %>% 
-    filter(UF == uf, ESTRATO_POF %in% estrato) %>%
+    filter(UF == uf, 
+           ESTRATO_POF %in% estrato,
+           TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
     mutate(Codigo = round(V9001/100), 
            valor_mensal = V8000_DEFLA* PESO_FINAL)
   
   
   # Vamos juntar as tabelas para calcular a depesa total
-  gastos_all <- bind_rows(caderneta_coletiva,despesa_coletiva, despesa_individual, aluguel)
+  gastos_all <- bind_rows(caderneta_coletiva, despesa_coletiva, despesa_individual, aluguel)
   
   
   # Vamos então atribuir a informção do decil da renda dom per capita para cada UC
@@ -308,24 +321,37 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
 }
 
 
-# Para CT
-ct <- tabela_consumo_pc_pof_f(uf = 41, estrato = 4101:4105)
+# Default é sem rural (quando tiver rural deixaremos claro no nome do objeto)
 
-# Para RMCT
-rmct <- tabela_consumo_pc_pof_f(uf = 41, estrato = 4101:4108)
+# Paraná (UF como um todo) - com rural
+pr_com_rural <- tabela_consumo_pc_pof_f(uf = 41, estrato = estrato_uf_com_rural)
 
-export <- 'F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Resultados/POF'
+# Paraná (UF como um todo) - Sem rural
+pr <- tabela_consumo_pc_pof_f(uf = 41, estrato = estrato_uf_sem_rural)
 
-write.csv2(x = ct, file = file.path(export, 'pof_ct.csv'))
-write.csv2(x = rmct, file = file.path(export, 'pof_rmct.csv'))
+# Paraná sem a região metropolitana - sem rural
+pr_sem_rm <- tabela_consumo_pc_pof_f(uf = 41, estrato = estrato_uf_sem_rm_sem_rural)
+
+# Para RM
+rm <- tabela_consumo_pc_pof_f(uf = 41, estrato = estrato_rm)
+
+# Para RM sem a capital 
+rm_sem_capital <- tabela_consumo_pc_pof_f(uf = 41, estrato = estrato_rm_sem_capital)
+
+# Para Capital
+capital <- tabela_consumo_pc_pof_f(uf = 41, estrato = estrato_capital)
+
+
+# Exportando em excel
+write_xlsx(x = pr_com_rural, path = file.path(export, 'tabelas_consumo.xlsx'))
+write_xlsx(x = pr, path = file.path(export, 'tabelas_consumo.xlsx'), append = T)
 
 
 
-# Gastos com in natura, culinario, processado, ultraprocessado
+# Gastos com in natura, culinario, processado, ultraprocessado ------
 
 # Ainda precisamos melhorar essa funcao
 tabela_ultra_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
-  
   
   
   # variaveis de identificação do domicílio (para as chaves)
@@ -392,12 +418,6 @@ tabela_ultra_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   head(survey_design$variables)
   
   
-  # Dados de despesa ---- 
-  
-  
-  # Calculo das despesas total ----- 
-  
-  
   # Calculo das despesas com alimentação ----- 
   caderneta_coletiva <- readRDS("CADERNETA_COLETIVA.rds")
   despesa_individual <- readRDS("DESPESA_INDIVIDUAL.rds")
@@ -450,7 +470,6 @@ tabela_ultra_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   
   
   ### Tabelas de tradutores para ultra processados 
-  
   tradutor_ultra <- readxl::read_excel("../Tradutores_de_Tabela/Cadastro de Produtos POF 2019.xlsx", range = "A1:D8322") 
   
   # Vamos ficar apenas com os que possuem informações
@@ -536,16 +555,18 @@ tabela_ultra_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   
 }
 
-
 # Para CT
 ct <- tabela_ultra_pc_pof_f(uf = 41, estrato = 4101:4105)
 
 # Para RMCT
 rmct <- tabela_ultra_pc_pof_f(uf = 41, estrato = 4101:4108)
 
-write.csv2(x = ct, file = file.path(export, 'pof_ct_ultraprocessados.csv'))
-write.csv2(x = rmct, file = file.path(export, 'pof_rmct_ultraprocessados.csv'))
+# Para RMCT sem CT
+rmct_sem_ct <- tabela_ultra_pc_pof_f(uf = 41, estrato = 4106:4108)
 
+write.csv2(x = ct, file = file.path(export, 'pof_consumo_tipo_proces_ct.csv'))
+write.csv2(x = rmct, file = file.path(export, 'pof_consumo_tipo_proces_rmct.csv'))
+write.csv2(x = rmct_sem_ct, file = file.path(export, 'pof_consumo_tipo_proces_rmct_sem_ct.csv'))
 
 
 
