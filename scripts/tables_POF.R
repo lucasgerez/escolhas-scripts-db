@@ -197,14 +197,11 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   despesa_coletiva <- 
     despesa_coletiva %>%
     mutate(Codigo = round(V9001/100), # 5 dígitos
-           valor_mensal = ifelse(QUADRO %in% c(10,19),
-                                 (V8000_DEFLA * V9011 * FATOR_ANUALIZACAO * PESO_FINAL)/12,
-                                 (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12 
-           )) %>%
-    filter(UF == uf, 
-           ESTRATO_POF %in% estrato,
-           TIPO_SITUACAO_REG %in% tipo_situacao_dom)  %>% 
-    as.data.frame()
+           valor_mensal = (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12) %>%
+  filter(UF == uf, 
+         ESTRATO_POF %in% estrato,
+         TIPO_SITUACAO_REG %in% tipo_situacao_dom)  %>% 
+  as.data.frame()
   
   despesa_individual <- 
     despesa_individual %>%
@@ -259,7 +256,7 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   
   # Tem alguma possível dupla contagem aqui das depesas gerais com as demais
   
-  # Gastos totais por decil (em construção)
+  # Gastos totais por decil
   tab1 <- 
     gastos_all %>% 
     left_join(tradutor_desp_geral, by = "Codigo") %>%
@@ -288,20 +285,21 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
            decis_renda = decis) %>%
     select(decis_renda, despesa_consumo)
   
-  # Despesas em Alimentação 
+  # Despesas em Alimentação no domicilio
   tab3 <- 
     gastos_all %>% 
     left_join(tradutor_alimentacao, by = "Codigo") %>%
-    filter(Descricao_0 == 'Alimentacao') %>%
+    filter(Descricao_1 == 'Alimentação no domicílio') %>%
     filter(is.na(Descricao_1) == F) %>%
     group_by(decis) %>%
     summarise( valor_mensal = sum(valor_mensal) ) %>% 
     left_join(soma_familia, by = 'decis') %>%
     mutate( valor_mensal = format_real(valor_mensal/soma_pessoas)  ) %>%
     filter(is.na(decis)==F) %>%
-    rename(despesa_alimentacao = valor_mensal,
+    rename(despesa_alimentacao_no_domicilio = valor_mensal,
            decis_renda = decis) %>%
-    select(decis_renda, despesa_alimentacao)
+    select(decis_renda, despesa_alimentacao_no_domicilio)
+  
   
   # Alimentação fora do domicilio
   tab4 <- 
@@ -343,25 +341,6 @@ for (d in dimensoes) {
 
 # nomes para facilitar
 names(lst.despesas) <- dimensoes
-
-
-# # Corrigir a exportação dos arquivos depois
-# 
-# # Exportando em excel
-# write_xlsx(x = pr_com_rural, path = file.path(export, 'tabelas_consumo.xlsx'))
-# write_xlsx(x = pr, path = file.path(export, 'tabelas_consumo.xlsx'), append = T)
-# 
-# # Tabela
-# write.xlsx(x = pr_com_rural, 
-#            file = file.path(export, 'tabelas_consumo.xlsx'), 
-#            sheetName = "pr_com_rural")
-# 
-# # Write the new data to a new sheet in the existing file
-# write.xlsx(x = pr,
-#            file = file.path(export, 'tabelas_consumo.xlsx'),
-#            sheetName = "pr", append = TRUE)
-# 
-
 
 
 # Gastos com in natura, culinario, processado, ultraprocessado ------
@@ -591,9 +570,6 @@ names(lst.ultra) <- dimensoes
 
 # Decomposição das despesas com alimentação por grupos de alimentos consumidos no e fora do domicílio e faixas de renda ------
 
-# EM CONSTRUÇÃO -----
-
-# Ainda precisamos melhorar essa funcao
 tabela_share_tipo_alimento_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   
   
@@ -661,10 +637,7 @@ tabela_share_tipo_alimento_pof_f <- function(uf, estrato, tipo_situacao_dom = 1)
                                        include.lowest = T, 
                                        na.pass = TRUE)
   
-  # head(survey_design$variables)
-  
-  
-  # Calculo das despesas total ----- 
+  # Calculo das despesas total com alimentacao ----- 
   
   
   # Calculo das despesas com alimentação ----- 
@@ -695,9 +668,8 @@ tabela_share_tipo_alimento_pof_f <- function(uf, estrato, tipo_situacao_dom = 1)
     as.data.frame()
   
   
-  # Vamos juntar as tabelas para calcular a depesa total
+  # Vamos juntar as tabelas para calcular a depesa total com alimentacao
   gastos_all <- bind_rows(caderneta_coletiva, despesa_individual)
-  
   
   # Vamos então atribuir a informção do decil da renda dom per capita para cada UC
   merge_decis <- survey_design$variables %>% rename(peso_df_morador = PESO_FINAL) %>% as.data.frame()
@@ -737,7 +709,6 @@ tabela_share_tipo_alimento_pof_f <- function(uf, estrato, tipo_situacao_dom = 1)
              'Alimentos preparados')
   
   # Classificação para os itens fora do domicilio
-  
   itens_fora <- c('Café, leite, chocolate', 
                   'Sanduíches e salgados',
                   'Lanches', 
@@ -756,8 +727,7 @@ tabela_share_tipo_alimento_pof_f <- function(uf, estrato, tipo_situacao_dom = 1)
     left_join(tradutor_alimentacao, by = "Codigo") %>%
     left_join(soma_familia, by = 'decis') %>% # head()
     filter(is.na(Descricao_0) == F, 
-           Descricao_1 == 'Alimentação no domicílio',
-           is.na(Descricao_2) == F) %>%
+           Descricao_1 == 'Alimentação no domicílio') %>%
     group_by(decis, Descricao_4) %>%
     summarise(valor_mensal_pc = sum(valor_mensal, na.rm = T)/(mean(soma_pessoas, na.rm = T))) %>%
     pivot_wider(
@@ -782,10 +752,7 @@ tabela_share_tipo_alimento_pof_f <- function(uf, estrato, tipo_situacao_dom = 1)
               decil9 = 100 * decil9/sum(decil9, na.rm = T),
               decil10 = 100 * decil10/sum(decil10, na.rm = T))
   
-  gastos_alimentacao <- cbind(gastos_alimentacao$Grupos_alimentos, gastos_alimentacao_aux)
-  
-  
-  
+  gastos_alimentacao <- cbind(data.frame(grupo_alimentos = gastos_alimentacao$Grupos_alimentos), gastos_alimentacao_aux)
   
   # FORA DO DOMICILIO
   # Gastos com alimentação NO domicilio
@@ -794,8 +761,7 @@ tabela_share_tipo_alimento_pof_f <- function(uf, estrato, tipo_situacao_dom = 1)
     left_join(tradutor_alimentacao, by = "Codigo") %>%
     left_join(soma_familia, by = 'decis') %>% # head()
     filter(is.na(Descricao_0) == F, 
-           Descricao_1 == 'Alimentação fora do domicílio',
-           is.na(Descricao_2) == F) %>%
+           Descricao_1 == 'Alimentação fora do domicílio') %>%
     group_by(decis, Descricao_5) %>%
     summarise(valor_mensal_pc = sum(valor_mensal, na.rm = T)/(mean(soma_pessoas, na.rm = T))) %>%
     pivot_wider(
@@ -820,20 +786,19 @@ tabela_share_tipo_alimento_pof_f <- function(uf, estrato, tipo_situacao_dom = 1)
               decil9 = 100 * decil9/sum(decil9, na.rm = T),
               decil10 = 100 * decil10/sum(decil10, na.rm = T))
   
-  gastos_alimentacao_fora <- cbind(gastos_alimentacao_fora$Grupos_alimentos, gastos_alimentacao_fora_aux)
+  gastos_alimentacao_fora <- cbind( data.frame(grupo_alimentos = gastos_alimentacao_fora$Grupos_alimentos), gastos_alimentacao_fora_aux)
   
   
+  # Vamos juntar as duas tabelas com a identificação dentro e fora do domicílio
+  gastos_alimentacao <- cbind( data.frame(grupo = 'Alimentação no domicílio'),  gastos_alimentacao)
+  gastos_alimentacao_fora <- cbind( data.frame(grupo = 'Alimentação fora do domicílio'),  gastos_alimentacao_fora)
   
   
-  
-  
-  
-  
-  return(tab_final)
+  return(rbind(gastos_alimentacao, gastos_alimentacao_fora))
   
 }
 
-lst.despesas <- list()
+lst.decomp <- list()
 
 for (d in dimensoes) {
   
@@ -841,392 +806,428 @@ for (d in dimensoes) {
   
   tipo_dom <- ifelse(d == 'estrato_uf_com_rural', c(1:2), 1)
   
-  lst.despesas[[match(d, dimensoes)]] <- tabela_share_tipo_alimento_pof_f(uf = uf, estrato = get(d), tipo_situacao_dom = tipo_dom)
+  lst.decomp[[match(d, dimensoes)]] <- tabela_share_tipo_alimento_pof_f(uf = uf, estrato = get(d), tipo_situacao_dom = tipo_dom)
   
 }
 
 # nomes para facilitar
-names(lst.despesas) <- dimensoes
+names(lst.decomp) <- dimensoes
 
 
-# Consumo alimentar médio per capita (g/dia) por grupo de alimento ----
 
-tabela_consumo_alimento_gramas_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
-  
-  
-  # variaveis de identificação do domicílio (para as chaves)
-  var_dom <- c("UF", "ESTRATO_POF", "TIPO_SITUACAO_REG",
-               "COD_UPA", "NUM_DOM", "NUM_UC")
-  
-  
-  # Bloco 1: familias e pessoas
-  num_pessoas <- readRDS("MORADOR.rds") %>% 
-    filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
-    group_by(UF, ESTRATO_POF, TIPO_SITUACAO_REG,
-             COD_UPA, NUM_DOM, NUM_UC) %>% 
-    summarise(pessoas_dom = max(COD_INFORMANTE))
-  
-  
-  # Atribuindo o número de pessoas da familia
-  morador_uc <- unique(readRDS("MORADOR.rds")[, c(var_dom, "PESO_FINAL", "PC_RENDA_MONET") ]) %>%
-    filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
-    left_join(num_pessoas, by = var_dom)
-  
-  
-  # Retringindo para a região de interesse
-  morador_df <- morador_uc %>% 
-    filter(UF == uf,
-           ESTRATO_POF %in% estrato) 
-  
-  
-  # Big numbers
-  # O total de familias deve ser calculado por decil
-  soma_familia <- sum(morador_df$PESO_FINAL)
-  soma_pessoas <- sum(morador_df$pessoas_dom*morador_df$PESO_FINAL)
-  
-  
-  # Consumo Alimentar 
-  consumo_alimentar <- readRDS("CONSUMO_ALIMENTAR.rds")
-  
-  ## Tratamento das variáveis ---- 
-  
-  # Tendo em vista que a frequência informada de consumo é semanal, vamos calcular por dia 
-  consumo_alimentar <- 
-    consumo_alimentar %>%
-    filter(UF == uf,
-           ESTRATO_POF %in% estrato,
-           TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
-    mutate(Codigo = round(V9001/100), 
-           consumo_g_diario = ifelse(DIA_ATIPICO == 2, (QTD * 4 * PESO_FINAL)/30, QTD * PESO_FINAL ) ) # Dia atípico considera-se 1 vez no mês
-  
-  
-  # Informação de alimentação 
-  tradutor_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Alimentação.xls") 
-  
-  # Vamos criar uma subcategoria da descrição 2 que agregue em outros
-  itens <- c('Cereais, leguminosas e oleaginosas', 
-             'Farinhas, féculas e massas',
-             'Tubérculos e raízes', 
-             'Açúcares e derivados',
-             'Legumes e verduras',
-             'Frutas',
-             'Carnes, vísceras, pescados',
-             'Aves e ovos',
-             'Leites e derivados',
-             'Panificados',
-             'Óleos e gorduras',
-             'Bebidas e infusões',
-             'Enlatados e conservas',
-             'Sal e condimentos',
-             'Alimentos preparados')
-  
-  # Classificação para os itens fora do domicilio
-  itens_fora <- c('Café, leite, chocolate', 
-                  'Sanduíches e salgados',
-                  'Lanches', 
-                  'Almoço e jantar',
-                  'Bebidas',
-                  'Outros')
-  
-  tradutor_alimentacao <- tradutor_alimentacao %>% 
-    mutate( Descricao_4 = ifelse(Descricao_2 %in% itens, Descricao_2, 'Outros alimentos'),
-            Descricao_5 = ifelse(Descricao_2 %in% itens_fora, Descricao_2, 'Outros alimentos'))
-  
-  
-  # Gastos com alimentação NO domicilio
-  alimentacao <-
-    consumo_alimentar %>%
-    left_join(tradutor_alimentacao, by = "Codigo") %>%
-    filter(is.na(Descricao_0) == F, 
-           Descricao_1 == 'Alimentação no domicílio',
-           is.na(Descricao_2) == F) %>%
-    group_by(Descricao_3) %>%
-    summarise(consumo_mensal_pc = sum(consumo_g_diario, na.rm = T)/(mean(soma_pessoas, na.rm = T)))
-  
-  
-  
-  
-  ################### ANTIGO
-  
-  # vamos mudar aqui pq será as colunas
-  
-  ### Tabela final com os resultados
-  tab_final <- data.frame(decis_renda = 1:10)
-  
-  ## calculando a renda per capita domiciliar (primeiro nomimal, depois deflacionamos para 2023) ----
-  
-  # Apenas variaveis com informacoes das UC's no arquivo 'MORADOR.rds'
-  # Apenas um registro por UC
-  
-  num_pessoas <- readRDS("MORADOR.rds") %>% 
-    filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
-    group_by(UF, ESTRATO_POF, TIPO_SITUACAO_REG,
-             COD_UPA, NUM_DOM, NUM_UC) %>% 
-    summarise(pessoas_dom = max(COD_INFORMANTE))
-  
-  # Atribuindo o número de pessoas da familia
-  morador_uc <- unique(readRDS("MORADOR.rds")[, c(var_dom, "PESO_FINAL", "PC_RENDA_MONET") ]) %>%
-    filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
-    left_join(num_pessoas, by = var_dom)
-  
-  # Retringindo para a região de interesse
-  morador_df <- morador_uc %>% 
-    filter(UF == uf,
-           ESTRATO_POF %in% estrato) 
-  
-  
-  # Big numbers
-  # O total de familias deve ser calculado por decil
-  soma_familia <- sum(morador_df$PESO_FINAL)
-  soma_pessoas <- sum(morador_df$pessoas_dom*morador_df$PESO_FINAL)
-  
-  # Tamanho médio por familia 
-  weighted.mean(morador_df$pessoas_dom, w = morador_df$PESO_FINAL)
-  
-  
-  # Vamos definir o dataframe como survey
-  survey_design <- svydesign(ids = ~1, weights = ~PESO_FINAL, data = morador_df)
-  
-  # Calculate the weighted deciles
-  deciles <- svyquantile(~PC_RENDA_MONET, 
-                         survey_design, 
-                         quantiles = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1))
-  
-  # Extract the deciles
-  weighted_deciles <- deciles$PC_RENDA_MONET[,1] 
-  
-  
-  # Inserindo na tabela final 
-  tab_final$renda_dom_pc <- paste0("R$ ", prettyNum(round(weighted_deciles[-1],0),big.mark = ".", small.mark = ","))
-  tab_final$renda_dom_pc[1] <- paste0("Até ", tab_final$renda_dom_pc[1])
-  tab_final$renda_dom_pc[10] <- paste0("Acima de ", tab_final$renda_dom_pc[9])
-  
-  
-  survey_design$variables$decis <- cut(survey_design$variables$PC_RENDA_MONET, 
-                                       breaks = weighted_deciles,
-                                       labels = F, 
-                                       include.lowest = T, 
-                                       na.pass = TRUE)
-  
-  # head(survey_design$variables)
-  
-  
-  # Calculo das despesas total ----- 
-  
-  
-  # Calculo das despesas com alimentação ----- 
-  caderneta_coletiva <- readRDS("CADERNETA_COLETIVA.rds")
-  despesa_individual <- readRDS("DESPESA_INDIVIDUAL.rds")
-  
-  ## Tratamento das variáveis ---- 
-  caderneta_coletiva <- 
-    caderneta_coletiva %>%
-    mutate(Codigo = round(V9001/100), # 5 dígitos
-           valor_mensal = (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12) %>%
-    filter(UF == uf, 
-           ESTRATO_POF %in% estrato, # filtro para a região de interesse
-           TIPO_SITUACAO_REG %in% tipo_situacao_dom,
-           Codigo < 86001 | Codigo > 89999 )  %>% 
-    as.data.frame()
-  
-  despesa_individual <- 
-    despesa_individual %>%
-    mutate(Codigo = round(V9001/100), # Retirar os últimos 2 dígitos
-           valor_mensal = ifelse(QUADRO %in% c(44, 47, 48, 49, 50), 
-                                 (V8000_DEFLA * V9011 * FATOR_ANUALIZACAO * PESO_FINAL)/12,
-                                 (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12)) %>%
-    filter(UF == uf, 
-           ESTRATO_POF %in% estrato, # filtro para a região de interesse
-           TIPO_SITUACAO_REG %in% tipo_situacao_dom
-    )  %>% 
-    as.data.frame()
-  
-  
-  # Vamos juntar as tabelas para calcular a depesa total
-  gastos_all <- bind_rows(caderneta_coletiva, despesa_individual)
-  
-  
-  # Vamos então atribuir a informção do decil da renda dom per capita para cada UC
-  merge_decis <- survey_design$variables %>% rename(peso_df_morador = PESO_FINAL) %>% as.data.frame()
-  
-  # O total de familias deve ser calculado por decil
-  soma_familia <- merge_decis %>% 
-    group_by(decis) %>%
-    summarise(soma_familia = sum(peso_df_morador),
-              soma_pessoas = sum(pessoas_dom*peso_df_morador)) %>%
-    filter(is.na(decis) == F)
-  
-  # Atribuição das informações de decis na tabela de despesas totais
-  gastos_all <- gastos_all %>% 
-    left_join(merge_decis, 
-              by = c('UF', 'ESTRATO_POF', 'TIPO_SITUACAO_REG', 'COD_UPA', 'NUM_DOM', 'NUM_UC')) 
-  
-  
-  # Informação de alimentação 
-  tradutor_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Alimentação.xls") 
-  
-  # Vamos criar uma subcategoria da descrição 2 que agregue em outros
-  
-  itens <- c('Cereais, leguminosas e oleaginosas', 
-             'Farinhas, féculas e massas',
-             'Tubérculos e raízes', 
-             'Açúcares e derivados',
-             'Legumes e verduras',
-             'Frutas',
-             'Carnes, vísceras, pescados',
-             'Aves e ovos',
-             'Leites e derivados',
-             'Panificados',
-             'Óleos e gorduras',
-             'Bebidas e infusões',
-             'Enlatados e conservas',
-             'Sal e condimentos',
-             'Alimentos preparados')
-  
-  # Classificação para os itens fora do domicilio
-  
-  itens_fora <- c('Café, leite, chocolate', 
-                  'Sanduíches e salgados',
-                  'Lanches', 
-                  'Almoço e jantar',
-                  'Bebidas',
-                  'Outros')
-  
-  tradutor_alimentacao <- tradutor_alimentacao %>% 
-    mutate( Descricao_4 = ifelse(Descricao_2 %in% itens, Descricao_2, 'Outros alimentos'),
-            Descricao_5 = ifelse(Descricao_2 %in% itens_fora, Descricao_2, 'Outros alimentos'))
-  
-  
-  # Gastos com alimentação NO domicilio
-  gastos_alimentacao <-
-    gastos_all %>%
-    left_join(tradutor_alimentacao, by = "Codigo") %>%
-    left_join(soma_familia, by = 'decis') %>% # head()
-    filter(is.na(Descricao_0) == F, 
-           Descricao_1 == 'Alimentação no domicílio',
-           is.na(Descricao_2) == F) %>%
-    group_by(decis, Descricao_4) %>%
-    summarise(valor_mensal_pc = sum(valor_mensal, na.rm = T)/(mean(soma_pessoas, na.rm = T))) %>%
-    pivot_wider(
-      names_from = decis,
-      values_from = valor_mensal_pc
-    )
-  
-  names(gastos_alimentacao) <- c('Grupos_alimentos', paste0('decil', 1:10))
-  
-  
-  # Outros alimentos aqui ainda está beeem estranho
-  gastos_alimentacao_aux <- 
-    gastos_alimentacao %>% 
-    summarise(decil1 = 100 * decil1/sum(decil1, na.rm = T),
-              decil2 = 100 * decil2/sum(decil2, na.rm = T),
-              decil3 = 100 * decil3/sum(decil3, na.rm = T),
-              decil4 = 100 * decil4/sum(decil4, na.rm = T),
-              decil5 = 100 * decil5/sum(decil5, na.rm = T),
-              decil6 = 100 * decil6/sum(decil6, na.rm = T),
-              decil7 = 100 * decil7/sum(decil7, na.rm = T),
-              decil8 = 100 * decil8/sum(decil8, na.rm = T),
-              decil9 = 100 * decil9/sum(decil9, na.rm = T),
-              decil10 = 100 * decil10/sum(decil10, na.rm = T))
-  
-  gastos_alimentacao <- cbind(gastos_alimentacao$Grupos_alimentos, gastos_alimentacao_aux)
-  
-  
-  
-  
-  # FORA DO DOMICILIO
-  # Gastos com alimentação NO domicilio
-  gastos_alimentacao_fora <-
-    gastos_all %>%
-    left_join(tradutor_alimentacao, by = "Codigo") %>%
-    left_join(soma_familia, by = 'decis') %>% # head()
-    filter(is.na(Descricao_0) == F, 
-           Descricao_1 == 'Alimentação fora do domicílio',
-           is.na(Descricao_2) == F) %>%
-    group_by(decis, Descricao_5) %>%
-    summarise(valor_mensal_pc = sum(valor_mensal, na.rm = T)/(mean(soma_pessoas, na.rm = T))) %>%
-    pivot_wider(
-      names_from = decis,
-      values_from = valor_mensal_pc
-    )
-  
-  names(gastos_alimentacao_fora) <- c('Grupos_alimentos', paste0('decil', 1:10))
-  
-  
-  # Outros alimentos aqui ainda está beeem estranho
-  gastos_alimentacao_fora_aux <- 
-    gastos_alimentacao_fora %>% 
-    summarise(decil1 = 100 * decil1/sum(decil1, na.rm = T),
-              decil2 = 100 * decil2/sum(decil2, na.rm = T),
-              decil3 = 100 * decil3/sum(decil3, na.rm = T),
-              decil4 = 100 * decil4/sum(decil4, na.rm = T),
-              decil5 = 100 * decil5/sum(decil5, na.rm = T),
-              decil6 = 100 * decil6/sum(decil6, na.rm = T),
-              decil7 = 100 * decil7/sum(decil7, na.rm = T),
-              decil8 = 100 * decil8/sum(decil8, na.rm = T),
-              decil9 = 100 * decil9/sum(decil9, na.rm = T),
-              decil10 = 100 * decil10/sum(decil10, na.rm = T))
-  
-  gastos_alimentacao_fora <- cbind(gastos_alimentacao_fora$Grupos_alimentos, gastos_alimentacao_fora_aux)
-  
-  
-  
-  
-  
-  
-  
-  
-  return(tab_final)
-  
-}
+# Vamos exportar todas as tabelas 
+
+library(writexl)
+
+sheets <- list("desp_estrato_uf_com_rural" = lst.despesas$estrato_uf_com_rural, 
+               "desp_estrato_uf_sem_rural" = lst.despesas$estrato_uf_sem_rural,
+               "desp_estrato_uf_sem_rm_sem_rural" = lst.despesas$estrato_uf_sem_rm_sem_rural,
+               "desp_estrato_rm" = lst.despesas$estrato_rm,
+               "desp_estrato_rm_sem_capital" = lst.despesas$estrato_rm_sem_capital,
+               "desp_estrato_capital" = lst.despesas$estrato_capital,
+               
+               "tipo_proc_estrato_uf_com_rural" = lst.ultra$estrato_uf_com_rural, 
+               "tipo_proc_estrato_uf_sem_rural" = lst.ultra$estrato_uf_sem_rural,
+               "tipo_proc_estrato_uf_sem_rm_sem_rural" = lst.ultra$estrato_uf_sem_rm_sem_rural,
+               "tipo_proc_estrato_rm" = lst.ultra$estrato_rm,
+               "tipo_proc_estrato_rm_sem_capital" = lst.ultra$estrato_rm_sem_capital,
+               "tipo_proc_estrato_capital" = lst.ultra$estrato_capital,
+               
+               "share_alim_estrato_uf_com_rural" = lst.decomp$estrato_uf_com_rural, 
+               "share_alim_estrato_uf_sem_rural" = lst.decomp$estrato_uf_sem_rural,
+               "share_alim_estrato_uf_sem_rm_sem_rural" = lst.decomp$estrato_uf_sem_rm_sem_rural,
+               "share_alim_estrato_rm" = lst.decomp$estrato_rm,
+               "share_alim_estrato_rm_sem_capital" = lst.decomp$estrato_rm_sem_capital,
+               "share_alim_estrato_capital" = lst.decomp$estrato_capital
+               ) 
+
+write_xlsx(sheets, "F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Resultados/POF/pof_tabelas.xlsx")
 
 
 
 
-
-
-
-
-
-# Tabelas requeridas pelo Pedro
-
-# Tabela 3. Distribuição da renda familiar, despesas e gasto alimentar mensais per capita por décimos de renda familiar per capita – RMSP, 2017/2018.
-# Tabela 4. Evolução da participação dos gastos alimentares nas despesas gerais e da alimentação no domicílio sobre o gasto alimentar — RMSP e Brasil, 1987/88, 1995/96, 2002/03, 2008/09 e 2017/18.
-# Tabela 5. Composição do orçamento alimentar segundo grupos de alimentos e tipos de alimentação fora do domicílio, por décimos de renda familiar per capita — RMSP, 2017/18.
-# Figura 8. Distribuição das despesas de consumo por grupos de despesa, segundo décimos de renda familiar per capita – RMSP, 2017/2018.
-# Figura 9. Participação da alimentação fora do domicílio no gasto alimentar, segundo décimos de renda familiar per capita – RMSP, 2017/2018.
-# Figura 11. Evolução na quantidade adquirida para o domicílio por grupos de alimentos — RMSP 1987/88, 1995/96, 2002/03, 2008/09 e 2017/18.
-# Figura 12. Distribuição do número de aquisições, por locais de compra por e grupos de alimentos — Brasil, 2008/09.
-
-
-
-
-## Tab 1 ----  
-# Gasto com alimentos dentro e fora de casa, por extrato de renda familiar,em relação aos outros tipos de despesas
-
-
-## Tab 2 ----  
-# Gasto com alimentos dentro e fora de casa, por extrato de renda familiar, tipo de alimento
-
-## Tab 3 ----  
-# Evolução da quantidade anual per capita adquirida por grupos alimentares
-
-## Tab 4 ----  
-# Locais de compra dos produtos alimentares
-
-## Tab 5 ----  
-# Prevalência de Insegurança Alimentar e Nutricional (IAN) nos domicílios 
-
-## Tab 6 ----  
-# Aquisição alimentar domiciliar em Curitiba, de acordo com a Classificação NOVA
-
-## Tab 7 ----  
-# Média de aquisição alimentar per capita anual
-
-
-
-
-
-
-
-
+# 
+# 
+# 
+# 
+# # Consumo alimentar médio per capita (g/dia) por grupo de alimento ----
+# 
+# tabela_consumo_alimento_gramas_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
+#   
+#   
+#   # variaveis de identificação do domicílio (para as chaves)
+#   var_dom <- c("UF", "ESTRATO_POF", "TIPO_SITUACAO_REG",
+#                "COD_UPA", "NUM_DOM", "NUM_UC")
+#   
+#   
+#   # Bloco 1: familias e pessoas
+#   num_pessoas <- readRDS("MORADOR.rds") %>% 
+#     filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
+#     group_by(UF, ESTRATO_POF, TIPO_SITUACAO_REG,
+#              COD_UPA, NUM_DOM, NUM_UC) %>% 
+#     summarise(pessoas_dom = max(COD_INFORMANTE))
+#   
+#   
+#   # Atribuindo o número de pessoas da familia
+#   morador_uc <- unique(readRDS("MORADOR.rds")[, c(var_dom, "PESO_FINAL", "PC_RENDA_MONET") ]) %>%
+#     filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
+#     left_join(num_pessoas, by = var_dom)
+#   
+#   
+#   # Retringindo para a região de interesse
+#   morador_df <- morador_uc %>% 
+#     filter(UF == uf,
+#            ESTRATO_POF %in% estrato) 
+#   
+#   
+#   # Big numbers
+#   # O total de familias deve ser calculado por decil
+#   soma_familia <- sum(morador_df$PESO_FINAL)
+#   soma_pessoas <- sum(morador_df$pessoas_dom*morador_df$PESO_FINAL)
+#   
+#   
+#   # Consumo Alimentar 
+#   consumo_alimentar <- readRDS("CONSUMO_ALIMENTAR.rds")
+#   
+#   ## Tratamento das variáveis ---- 
+#   
+#   # Tendo em vista que a frequência informada de consumo é semanal, vamos calcular por dia 
+#   consumo_alimentar <- 
+#     consumo_alimentar %>%
+#     filter(UF == uf,
+#            ESTRATO_POF %in% estrato,
+#            TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
+#     mutate(Codigo = round(V9001/100), 
+#            consumo_g_diario = ifelse(DIA_ATIPICO == 2, (QTD * 4 * PESO_FINAL)/30, QTD * PESO_FINAL ) ) # Dia atípico considera-se 1 vez no mês
+#   
+#   
+#   # Informação de alimentação 
+#   tradutor_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Alimentação.xls") 
+#   
+#   # Vamos criar uma subcategoria da descrição 2 que agregue em outros
+#   itens <- c('Cereais, leguminosas e oleaginosas', 
+#              'Farinhas, féculas e massas',
+#              'Tubérculos e raízes', 
+#              'Açúcares e derivados',
+#              'Legumes e verduras',
+#              'Frutas',
+#              'Carnes, vísceras, pescados',
+#              'Aves e ovos',
+#              'Leites e derivados',
+#              'Panificados',
+#              'Óleos e gorduras',
+#              'Bebidas e infusões',
+#              'Enlatados e conservas',
+#              'Sal e condimentos',
+#              'Alimentos preparados')
+#   
+#   # Classificação para os itens fora do domicilio
+#   itens_fora <- c('Café, leite, chocolate', 
+#                   'Sanduíches e salgados',
+#                   'Lanches', 
+#                   'Almoço e jantar',
+#                   'Bebidas',
+#                   'Outros')
+#   
+#   tradutor_alimentacao <- tradutor_alimentacao %>% 
+#     mutate( Descricao_4 = ifelse(Descricao_2 %in% itens, Descricao_2, 'Outros alimentos'),
+#             Descricao_5 = ifelse(Descricao_2 %in% itens_fora, Descricao_2, 'Outros alimentos'))
+#   
+#   
+#   # Gastos com alimentação NO domicilio
+#   alimentacao <-
+#     consumo_alimentar %>%
+#     left_join(tradutor_alimentacao, by = "Codigo") %>%
+#     filter(is.na(Descricao_0) == F, 
+#            Descricao_1 == 'Alimentação no domicílio',
+#            is.na(Descricao_2) == F) %>%
+#     group_by(Descricao_3) %>%
+#     summarise(consumo_mensal_pc = sum(consumo_g_diario, na.rm = T)/(mean(soma_pessoas, na.rm = T)))
+#   
+#   
+#   
+#   
+#   ################### ANTIGO
+#   
+#   # vamos mudar aqui pq será as colunas
+#   
+#   ### Tabela final com os resultados
+#   tab_final <- data.frame(decis_renda = 1:10)
+#   
+#   ## calculando a renda per capita domiciliar (primeiro nomimal, depois deflacionamos para 2023) ----
+#   
+#   # Apenas variaveis com informacoes das UC's no arquivo 'MORADOR.rds'
+#   # Apenas um registro por UC
+#   
+#   num_pessoas <- readRDS("MORADOR.rds") %>% 
+#     filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
+#     group_by(UF, ESTRATO_POF, TIPO_SITUACAO_REG,
+#              COD_UPA, NUM_DOM, NUM_UC) %>% 
+#     summarise(pessoas_dom = max(COD_INFORMANTE))
+#   
+#   # Atribuindo o número de pessoas da familia
+#   morador_uc <- unique(readRDS("MORADOR.rds")[, c(var_dom, "PESO_FINAL", "PC_RENDA_MONET") ]) %>%
+#     filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom) %>%
+#     left_join(num_pessoas, by = var_dom)
+#   
+#   # Retringindo para a região de interesse
+#   morador_df <- morador_uc %>% 
+#     filter(UF == uf,
+#            ESTRATO_POF %in% estrato) 
+#   
+#   
+#   # Big numbers
+#   # O total de familias deve ser calculado por decil
+#   soma_familia <- sum(morador_df$PESO_FINAL)
+#   soma_pessoas <- sum(morador_df$pessoas_dom*morador_df$PESO_FINAL)
+#   
+#   # Tamanho médio por familia 
+#   weighted.mean(morador_df$pessoas_dom, w = morador_df$PESO_FINAL)
+#   
+#   
+#   # Vamos definir o dataframe como survey
+#   survey_design <- svydesign(ids = ~1, weights = ~PESO_FINAL, data = morador_df)
+#   
+#   # Calculate the weighted deciles
+#   deciles <- svyquantile(~PC_RENDA_MONET, 
+#                          survey_design, 
+#                          quantiles = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1))
+#   
+#   # Extract the deciles
+#   weighted_deciles <- deciles$PC_RENDA_MONET[,1] 
+#   
+#   
+#   # Inserindo na tabela final 
+#   tab_final$renda_dom_pc <- paste0("R$ ", prettyNum(round(weighted_deciles[-1],0),big.mark = ".", small.mark = ","))
+#   tab_final$renda_dom_pc[1] <- paste0("Até ", tab_final$renda_dom_pc[1])
+#   tab_final$renda_dom_pc[10] <- paste0("Acima de ", tab_final$renda_dom_pc[9])
+#   
+#   
+#   survey_design$variables$decis <- cut(survey_design$variables$PC_RENDA_MONET, 
+#                                        breaks = weighted_deciles,
+#                                        labels = F, 
+#                                        include.lowest = T, 
+#                                        na.pass = TRUE)
+#   
+#   # head(survey_design$variables)
+#   
+#   
+#   # Calculo das despesas total ----- 
+#   
+#   
+#   # Calculo das despesas com alimentação ----- 
+#   caderneta_coletiva <- readRDS("CADERNETA_COLETIVA.rds")
+#   despesa_individual <- readRDS("DESPESA_INDIVIDUAL.rds")
+#   
+#   ## Tratamento das variáveis ---- 
+#   caderneta_coletiva <- 
+#     caderneta_coletiva %>%
+#     mutate(Codigo = round(V9001/100), # 5 dígitos
+#            valor_mensal = (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12) %>%
+#     filter(UF == uf, 
+#            ESTRATO_POF %in% estrato, # filtro para a região de interesse
+#            TIPO_SITUACAO_REG %in% tipo_situacao_dom,
+#            Codigo < 86001 | Codigo > 89999 )  %>% 
+#     as.data.frame()
+#   
+#   despesa_individual <- 
+#     despesa_individual %>%
+#     mutate(Codigo = round(V9001/100), # Retirar os últimos 2 dígitos
+#            valor_mensal = ifelse(QUADRO %in% c(44, 47, 48, 49, 50), 
+#                                  (V8000_DEFLA * V9011 * FATOR_ANUALIZACAO * PESO_FINAL)/12,
+#                                  (V8000_DEFLA * FATOR_ANUALIZACAO * PESO_FINAL)/12)) %>%
+#     filter(UF == uf, 
+#            ESTRATO_POF %in% estrato, # filtro para a região de interesse
+#            TIPO_SITUACAO_REG %in% tipo_situacao_dom
+#     )  %>% 
+#     as.data.frame()
+#   
+#   
+#   # Vamos juntar as tabelas para calcular a depesa total
+#   gastos_all <- bind_rows(caderneta_coletiva, despesa_individual)
+#   
+#   
+#   # Vamos então atribuir a informção do decil da renda dom per capita para cada UC
+#   merge_decis <- survey_design$variables %>% rename(peso_df_morador = PESO_FINAL) %>% as.data.frame()
+#   
+#   # O total de familias deve ser calculado por decil
+#   soma_familia <- merge_decis %>% 
+#     group_by(decis) %>%
+#     summarise(soma_familia = sum(peso_df_morador),
+#               soma_pessoas = sum(pessoas_dom*peso_df_morador)) %>%
+#     filter(is.na(decis) == F)
+#   
+#   # Atribuição das informações de decis na tabela de despesas totais
+#   gastos_all <- gastos_all %>% 
+#     left_join(merge_decis, 
+#               by = c('UF', 'ESTRATO_POF', 'TIPO_SITUACAO_REG', 'COD_UPA', 'NUM_DOM', 'NUM_UC')) 
+#   
+#   
+#   # Informação de alimentação 
+#   tradutor_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Alimentação.xls") 
+#   
+#   # Vamos criar uma subcategoria da descrição 2 que agregue em outros
+#   
+#   itens <- c('Cereais, leguminosas e oleaginosas', 
+#              'Farinhas, féculas e massas',
+#              'Tubérculos e raízes', 
+#              'Açúcares e derivados',
+#              'Legumes e verduras',
+#              'Frutas',
+#              'Carnes, vísceras, pescados',
+#              'Aves e ovos',
+#              'Leites e derivados',
+#              'Panificados',
+#              'Óleos e gorduras',
+#              'Bebidas e infusões',
+#              'Enlatados e conservas',
+#              'Sal e condimentos',
+#              'Alimentos preparados')
+#   
+#   # Classificação para os itens fora do domicilio
+#   
+#   itens_fora <- c('Café, leite, chocolate', 
+#                   'Sanduíches e salgados',
+#                   'Lanches', 
+#                   'Almoço e jantar',
+#                   'Bebidas',
+#                   'Outros')
+#   
+#   tradutor_alimentacao <- tradutor_alimentacao %>% 
+#     mutate( Descricao_4 = ifelse(Descricao_2 %in% itens, Descricao_2, 'Outros alimentos'),
+#             Descricao_5 = ifelse(Descricao_2 %in% itens_fora, Descricao_2, 'Outros alimentos'))
+#   
+#   
+#   # Gastos com alimentação NO domicilio
+#   gastos_alimentacao <-
+#     gastos_all %>%
+#     left_join(tradutor_alimentacao, by = "Codigo") %>%
+#     left_join(soma_familia, by = 'decis') %>% # head()
+#     filter(is.na(Descricao_0) == F, 
+#            Descricao_1 == 'Alimentação no domicílio',
+#            is.na(Descricao_2) == F) %>%
+#     group_by(decis, Descricao_4) %>%
+#     summarise(valor_mensal_pc = sum(valor_mensal, na.rm = T)/(mean(soma_pessoas, na.rm = T))) %>%
+#     pivot_wider(
+#       names_from = decis,
+#       values_from = valor_mensal_pc
+#     )
+#   
+#   names(gastos_alimentacao) <- c('Grupos_alimentos', paste0('decil', 1:10))
+#   
+#   
+#   # Outros alimentos aqui ainda está beeem estranho
+#   gastos_alimentacao_aux <- 
+#     gastos_alimentacao %>% 
+#     summarise(decil1 = 100 * decil1/sum(decil1, na.rm = T),
+#               decil2 = 100 * decil2/sum(decil2, na.rm = T),
+#               decil3 = 100 * decil3/sum(decil3, na.rm = T),
+#               decil4 = 100 * decil4/sum(decil4, na.rm = T),
+#               decil5 = 100 * decil5/sum(decil5, na.rm = T),
+#               decil6 = 100 * decil6/sum(decil6, na.rm = T),
+#               decil7 = 100 * decil7/sum(decil7, na.rm = T),
+#               decil8 = 100 * decil8/sum(decil8, na.rm = T),
+#               decil9 = 100 * decil9/sum(decil9, na.rm = T),
+#               decil10 = 100 * decil10/sum(decil10, na.rm = T))
+#   
+#   gastos_alimentacao <- cbind(gastos_alimentacao$Grupos_alimentos, gastos_alimentacao_aux)
+#   
+#   
+#   
+#   
+#   # FORA DO DOMICILIO
+#   # Gastos com alimentação NO domicilio
+#   gastos_alimentacao_fora <-
+#     gastos_all %>%
+#     left_join(tradutor_alimentacao, by = "Codigo") %>%
+#     left_join(soma_familia, by = 'decis') %>% # head()
+#     filter(is.na(Descricao_0) == F, 
+#            Descricao_1 == 'Alimentação fora do domicílio',
+#            is.na(Descricao_2) == F) %>%
+#     group_by(decis, Descricao_5) %>%
+#     summarise(valor_mensal_pc = sum(valor_mensal, na.rm = T)/(mean(soma_pessoas, na.rm = T))) %>%
+#     pivot_wider(
+#       names_from = decis,
+#       values_from = valor_mensal_pc
+#     )
+#   
+#   names(gastos_alimentacao_fora) <- c('Grupos_alimentos', paste0('decil', 1:10))
+#   
+#   
+#   # Outros alimentos aqui ainda está beeem estranho
+#   gastos_alimentacao_fora_aux <- 
+#     gastos_alimentacao_fora %>% 
+#     summarise(decil1 = 100 * decil1/sum(decil1, na.rm = T),
+#               decil2 = 100 * decil2/sum(decil2, na.rm = T),
+#               decil3 = 100 * decil3/sum(decil3, na.rm = T),
+#               decil4 = 100 * decil4/sum(decil4, na.rm = T),
+#               decil5 = 100 * decil5/sum(decil5, na.rm = T),
+#               decil6 = 100 * decil6/sum(decil6, na.rm = T),
+#               decil7 = 100 * decil7/sum(decil7, na.rm = T),
+#               decil8 = 100 * decil8/sum(decil8, na.rm = T),
+#               decil9 = 100 * decil9/sum(decil9, na.rm = T),
+#               decil10 = 100 * decil10/sum(decil10, na.rm = T))
+#   
+#   gastos_alimentacao_fora <- cbind(gastos_alimentacao_fora$Grupos_alimentos, gastos_alimentacao_fora_aux)
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   return(tab_final)
+#   
+# }
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# # Tabelas requeridas pelo Pedro
+# 
+# # Tabela 3. Distribuição da renda familiar, despesas e gasto alimentar mensais per capita por décimos de renda familiar per capita – RMSP, 2017/2018.
+# # Tabela 4. Evolução da participação dos gastos alimentares nas despesas gerais e da alimentação no domicílio sobre o gasto alimentar — RMSP e Brasil, 1987/88, 1995/96, 2002/03, 2008/09 e 2017/18.
+# # Tabela 5. Composição do orçamento alimentar segundo grupos de alimentos e tipos de alimentação fora do domicílio, por décimos de renda familiar per capita — RMSP, 2017/18.
+# # Figura 8. Distribuição das despesas de consumo por grupos de despesa, segundo décimos de renda familiar per capita – RMSP, 2017/2018.
+# # Figura 9. Participação da alimentação fora do domicílio no gasto alimentar, segundo décimos de renda familiar per capita – RMSP, 2017/2018.
+# # Figura 11. Evolução na quantidade adquirida para o domicílio por grupos de alimentos — RMSP 1987/88, 1995/96, 2002/03, 2008/09 e 2017/18.
+# # Figura 12. Distribuição do número de aquisições, por locais de compra por e grupos de alimentos — Brasil, 2008/09.
+# 
+# 
+# 
+# 
+# ## Tab 1 ----  
+# # Gasto com alimentos dentro e fora de casa, por extrato de renda familiar,em relação aos outros tipos de despesas
+# 
+# 
+# ## Tab 2 ----  
+# # Gasto com alimentos dentro e fora de casa, por extrato de renda familiar, tipo de alimento
+# 
+# ## Tab 3 ----  
+# # Evolução da quantidade anual per capita adquirida por grupos alimentares
+# 
+# ## Tab 4 ----  
+# # Locais de compra dos produtos alimentares
+# 
+# ## Tab 5 ----  
+# # Prevalência de Insegurança Alimentar e Nutricional (IAN) nos domicílios 
+# 
+# ## Tab 6 ----  
+# # Aquisição alimentar domiciliar em Curitiba, de acordo com a Classificação NOVA
+# 
+# ## Tab 7 ----  
+# # Média de aquisição alimentar per capita anual
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
