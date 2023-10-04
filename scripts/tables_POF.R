@@ -99,11 +99,8 @@ dimensoes <- c('estrato_uf_com_rural', 'estrato_uf_sem_rural',
                'estrato_uf_sem_rm_sem_rural', 'estrato_rm',
                'estrato_rm_sem_capital', 'estrato_capital')
 
-
 # Share de despesas com alimentação -----
 tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
-  
-  
   
   # variaveis de identificação do domicílio (para as chaves)
   var_dom <- c("UF", "ESTRATO_POF", "TIPO_SITUACAO_REG",
@@ -141,15 +138,14 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   soma_pessoas <- sum(morador_df$pessoas_dom*morador_df$PESO_FINAL)
   
   # Tamanho médio por familia 
-  weighted.mean(morador_df$pessoas_dom, w = morador_df$PESO_FINAL)
-  
+  # weighted.mean(morador_df$pessoas_dom, w = morador_df$PESO_FINAL)
   
   # Vamos definir o dataframe como survey
   survey_design <- svydesign(ids = ~1, weights = ~PESO_FINAL, data = morador_df)
   
   # Calculate the weighted deciles
   deciles <- svyquantile(~PC_RENDA_MONET, 
-                         survey_design, 
+                         subset(survey_design, subset = !is.na(PC_RENDA_MONET))  , 
                          quantiles = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1))
   
   # Extract the deciles
@@ -333,9 +329,15 @@ for (d in dimensoes) {
   
   cat('\nDimensão', d, paste(Sys.time()))
   
-  tipo_dom <- ifelse(d == 'estrato_uf_com_rural', c(1:2), 1)
-  
-  lst.despesas[[match(d, dimensoes)]] <- tabela_consumo_pc_pof_f(uf = uf, estrato = get(d), tipo_situacao_dom = tipo_dom)
+  if (d == 'estrato_uf_com_rural') {
+    
+    lst.despesas[[match(d, dimensoes)]] <- tabela_consumo_pc_pof_f(uf = uf, estrato = get(d), tipo_situacao_dom = c(1:2))
+    
+  } else {
+    
+    lst.despesas[[match(d, dimensoes)]] <- tabela_consumo_pc_pof_f(uf = uf, estrato = get(d), tipo_situacao_dom = 1)
+    
+  }
   
 }
 
@@ -391,8 +393,9 @@ tabela_ultra_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   
   # Calculate the weighted deciles
   deciles <- svyquantile(~PC_RENDA_MONET, 
-                         survey_design, 
+                         subset(survey_design, subset = !is.na(PC_RENDA_MONET))  , 
                          quantiles = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1))
+  
   
   # Extract the deciles
   weighted_deciles <- deciles$PC_RENDA_MONET[,1] 
@@ -555,11 +558,18 @@ lst.ultra <- list()
 
 for (d in dimensoes) {
   
+  
   cat('\nDimensão', d, paste(Sys.time()))
   
-  tipo_dom <- ifelse(d == 'estrato_uf_com_rural', c(1:2), 1)
-  
-  lst.ultra[[match(d, dimensoes)]] <- tabela_ultra_pc_pof_f(uf = uf, estrato = get(d), tipo_situacao_dom = tipo_dom)
+  if (d == 'estrato_uf_com_rural') {
+    
+    lst.ultra[[match(d, dimensoes)]] <- tabela_ultra_pc_pof_f(uf = uf, estrato = get(d), tipo_situacao_dom = c(1:2))
+    
+  } else {
+    
+    lst.ultra[[match(d, dimensoes)]] <- tabela_ultra_pc_pof_f(uf = uf, estrato = get(d), tipo_situacao_dom = 1)
+    
+  }
   
 }
 
@@ -618,8 +628,9 @@ tabela_share_tipo_alimento_pof_f <- function(uf, estrato, tipo_situacao_dom = 1)
   
   # Calculate the weighted deciles
   deciles <- svyquantile(~PC_RENDA_MONET, 
-                         survey_design, 
+                         subset(survey_design, subset = !is.na(PC_RENDA_MONET))  , 
                          quantiles = c(0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1))
+  
   
   # Extract the deciles
   weighted_deciles <- deciles$PC_RENDA_MONET[,1] 
@@ -806,7 +817,16 @@ for (d in dimensoes) {
   
   tipo_dom <- ifelse(d == 'estrato_uf_com_rural', c(1:2), 1)
   
-  lst.decomp[[match(d, dimensoes)]] <- tabela_share_tipo_alimento_pof_f(uf = uf, estrato = get(d), tipo_situacao_dom = tipo_dom)
+  if (d == 'estrato_uf_com_rural') {
+    
+    lst.decomp[[match(d, dimensoes)]] <- tabela_share_tipo_alimento_pof_f(uf = uf, estrato = get(d), tipo_situacao_dom = c(1:2))
+    
+  } else {
+    
+    lst.decomp[[match(d, dimensoes)]] <- tabela_share_tipo_alimento_pof_f(uf = uf, estrato = get(d), tipo_situacao_dom = 1)
+    
+  }
+  
   
 }
 
