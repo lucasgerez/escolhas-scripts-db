@@ -553,7 +553,6 @@ tabela_ultra_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   
 }
 
-
 lst.ultra <- list()
 
 for (d in dimensoes) {
