@@ -158,13 +158,14 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   tab_final$renda_dom_pc[10] <- paste0("Acima de ", tab_final$renda_dom_pc[9])
   
   
+  # Atribuindo o decil que a pessoa está
   survey_design$variables$decis <- cut(survey_design$variables$PC_RENDA_MONET, 
                                        breaks = weighted_deciles,
                                        labels = F, 
                                        include.lowest = T, 
                                        na.pass = TRUE)
   
-  head(survey_design$variables)
+  
   
   
   # Dados de despesa ---- 
@@ -224,7 +225,7 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   gastos_all <- bind_rows(caderneta_coletiva, despesa_coletiva, despesa_individual, aluguel)
   
   
-  # Vamos então atribuir a informção do decil da renda dom per capita para cada UC
+  # Vamos então atribuir a informação do decil da renda dom per capita para cada UC
   merge_decis <- survey_design$variables %>% rename(peso_df_morador = PESO_FINAL) %>% as.data.frame()
   
   # O total de familias deve ser calculado por decil
@@ -250,7 +251,6 @@ tabela_consumo_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   # Informação de alimentação 
   tradutor_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Alimentação.xls") 
   
-  # Tem alguma possível dupla contagem aqui das depesas gerais com as demais
   
   # Gastos totais por decil
   tab1 <- 
@@ -385,7 +385,7 @@ tabela_ultra_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   soma_pessoas <- sum(morador_df$pessoas_dom*morador_df$PESO_FINAL)
   
   # Tamanho médio por familia 
-  weighted.mean(morador_df$pessoas_dom, w = morador_df$PESO_FINAL)
+  # weighted.mean(morador_df$pessoas_dom, w = morador_df$PESO_FINAL)
   
   
   # Vamos definir o dataframe como survey
@@ -833,31 +833,212 @@ for (d in dimensoes) {
 names(lst.decomp) <- dimensoes
 
 
+# Lista de share de consumo de alimento -----
+pof_alimentos_f <- function(uf, estrato, tipo_situacao_dom = 1) {
+  
+  # Bases necessárias
+  MORADOR <- readRDS("MORADOR.rds") %>%
+    filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom,
+           UF == uf,
+           ESTRATO_POF %in% estrato) %>%
+    rename(M_PESO_FINAL = PESO_FINAL,
+           M_PESO = PESO)
+  
+  CONSUMO_ALIMENTAR <- readRDS("CONSUMO_ALIMENTAR.rds") %>%
+    filter(TIPO_SITUACAO_REG %in% tipo_situacao_dom,
+           UF == uf,
+           ESTRATO_POF %in% estrato) %>%
+    rename(COD_INFORMANTE = COD_INFOR.MANTE, 
+           CA_PESO_FINAL = PESO_FINAL,
+           CA_PESO = PESO)
+  
+  
+  # Código para identificar a pessoa
+  var_pessoa <- c( 'UF', 'ESTRATO_POF', 'TIPO_SITUACAO_REG', 'COD_UPA', 'NUM_DOM', 'NUM_UC', 'COD_INFORMANTE', 'RENDA_TOTAL')
+  
+  POF_completa <- full_join( MORADOR, CONSUMO_ALIMENTAR, by = var_pessoa) 
+  rm(MORADOR, CONSUMO_ALIMENTAR); gc()
+  
+  POF_completa <- POF_completa %>% 
+    rename("Area_Habitacao"="TIPO_SITUACAO_REG",
+           "Sexo"="V0404",
+           "Idade"="V0403",
+           "Cor"="V0405",
+           "Cod_alimento"="V9001",
+           "PREPARACAO"="V9016")
+  
+  POF_completa$Area_Habitacao <- recode(POF_completa$Area_Habitacao, '1' = "urbano", '2' = "rural")
+  POF_completa$Sexo <- recode(POF_completa$Sexo, '1' = "homem", '2' = "mulher")
+  POF_completa$Cor <- recode(POF_completa$Cor, '1'= "branco",'2' ="preta" ,'3'="amarela", '4'="parda", '5'="indigena", '9'="SD")
+  POF_completa$INSTRUCAO <- recode(POF_completa$INSTRUCAO, '1'= "Sem instrucao",'2' ="Fundamental Incompleto" ,'3'="Fundamental Completo", '4'="Medio Incompleto", '5'="Medio Completo",'6'="Superior Incompleto",'7'="Superior Completo")
+  POF_completa$Preparacao <- recode(POF_completa$PREPARACAO, '1'= "Assado",'2' ="Cozido_gord" ,'3'="Cozido_sgordura", '4'="cru", '5'="Empanado",'6'="Ensopado",'7'="Frito", '8'="Grelhado", '9'="Refogado", '99'= "NA")
+  
+  # Código da pessoa
+  POF_completa <- transform(POF_completa, control = paste0(COD_UPA,NUM_DOM,NUM_UC,COD_INFORMANTE) )
+  
+  
+  # Vamos juntar com a tabela de alimentos
+  # Informação de alimentação 
+  tradutor_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Alimentação.xls") 
+  
+  
+  # Vamos pegar o cadastro de consumo dos ultraprocessados tbm 
+  ### Tabelas de tradutores para ultra processados 
+  tradutor_ultra <- readxl::read_excel("../Tradutores_de_Tabela/Cadastro de Produtos POF 2019.xlsx", range = "A1:D8322") 
+  
+  # Vamos ficar apenas com os que possuem informações
+  names(tradutor_ultra) <- c('quadro', 'Cod_alimento', 'Desc', 'Grupo_Processado')
+  
+  tradutor_ultra <- tradutor_ultra %>%
+    filter(is.na(Grupo_Processado)==F) %>% 
+    select(Cod_alimento, Grupo_Processado )
+  
+  tradutor_ultra$Grupo_Processado <- recode(tradutor_ultra$Grupo_Processado, 
+                                            '1' = "in natura e minimamente processado",
+                                            '2' = "ingrediente culinário" ,
+                                            '3' = "processado",
+                                            '4' = "ultraprocessado")
+  
+  POF_completa <- POF_completa %>%
+    mutate(Codigo = round(Cod_alimento/100)) %>%  
+    left_join(tradutor_alimentacao, by = "Codigo") %>%
+    left_join(tradutor_ultra, by = "Cod_alimento")
+  
+  
+  # Vamos calcular quantas pessoas temos no Brasil
+  pessoas_h_m <- 
+    POF_completa %>% 
+    distinct(control, .keep_all = TRUE) %>%
+    group_by(Sexo) %>%
+    summarise(pessoas = sum(M_PESO_FINAL)) 
+  
+  # Consumo por tipo de processamento
+  tab_ultra <- 
+    POF_completa  %>%  
+    group_by(control, M_PESO_FINAL, Sexo, Grupo_Processado) %>% 
+    summarise(sum=sum(QTD,na.rm=TRUE)) %>% 
+    group_by(Sexo, Grupo_Processado) %>% 
+    summarise(mean = sum(sum*M_PESO_FINAL),
+              pessoas_comem = sum(M_PESO_FINAL)) %>%
+    left_join(pessoas_h_m, by = 'Sexo') %>%
+    mutate(consumo = mean/pessoas,
+           consumo_comem = mean/pessoas_comem) %>% 
+    filter(!is.na(Grupo_Processado)) %>% 
+    group_by(Sexo) %>% 
+    mutate(share_pessoas_comem = round(100*pessoas_comem/pessoas,2),
+           share_consumo = round(100*consumo/sum(consumo),2)) %>%
+    select(Sexo, Grupo_Processado, share_pessoas_comem, share_consumo) %>%
+    pivot_wider(id_cols = Grupo_Processado, names_from = Sexo, values_from = c("share_pessoas_comem", "share_consumo"))
+  
+  
+  # Share de consumo por grupo de alimento (faz sentido bebidas e infusões representarem 50%?) 
+  tab_share_consumo <- 
+    POF_completa  %>%  
+    group_by(control, M_PESO_FINAL, Sexo, Descricao_2) %>% 
+    summarise(sum=sum(QTD,na.rm=TRUE)) %>% 
+    group_by(Sexo, Descricao_2) %>% 
+    summarise(mean = sum(sum*M_PESO_FINAL),
+              pessoas_comem = sum(M_PESO_FINAL)) %>%
+    left_join(pessoas_h_m, by = 'Sexo') %>%
+    mutate(consumo = mean/pessoas,
+           consumo_comem = mean/pessoas_comem) %>% 
+    filter(!is.na(Descricao_2)) %>% 
+    group_by(Sexo) %>% 
+    mutate(share_pessoas_comem = round(100*pessoas_comem/pessoas,2),
+           share_consumo = round(100*consumo/sum(consumo),2)) %>%
+    select(Sexo, Descricao_2, share_pessoas_comem, share_consumo) %>%
+    pivot_wider(id_cols = Descricao_2, names_from = Sexo, values_from = c("share_pessoas_comem", "share_consumo"))
+  
+  
+  lst.result <- list()
+  
+  lst.result$tab_ultra <- tab_ultra
+  lst.result$tab_share_consumo <- tab_share_consumo
+  
+  
+}
+
+
+lst.alimentos <- list()
+lst.ultra <- list()
+
+for (d in dimensoes) {
+  
+  cat('\nDimensão', d, paste(Sys.time()))
+  
+  if (d == 'estrato_uf_com_rural') {
+    
+    lst_aux <- pof_alimentos_f(uf = uf, estrato = get(d), tipo_situacao_dom = c(1:2))
+    
+    lst.ultra[[match(d, dimensoes)]] <- lst_aux$tab_ultra
+    lst.alimentos[[match(d, dimensoes)]] <- lst_aux$tab_share_consumo
+    
+    
+  } else {
+    
+    lst_aux <- pof_alimentos_f(uf = uf, estrato = get(d), tipo_situacao_dom = 1)
+    
+    lst.ultra[[match(d, dimensoes)]] <- lst_aux$tab_ultra
+    lst.alimentos[[match(d, dimensoes)]] <- lst_aux$tab_share_consumo
+    
+  }
+  
+  
+}
+
+# nomes para facilitar
+names(lst.ultra) <- dimensoes
+names(lst.alimentos) <- dimensoes
+
 
 # Vamos exportar todas as tabelas 
 
 library(writexl)
 
-sheets <- list("desp_estrato_uf_com_rural" = lst.despesas$estrato_uf_com_rural, 
-               "desp_estrato_uf_sem_rural" = lst.despesas$estrato_uf_sem_rural,
-               "desp_estrato_uf_sem_rm_sem_rural" = lst.despesas$estrato_uf_sem_rm_sem_rural,
-               "desp_estrato_rm" = lst.despesas$estrato_rm,
-               "desp_estrato_rm_sem_capital" = lst.despesas$estrato_rm_sem_capital,
-               "desp_estrato_capital" = lst.despesas$estrato_capital,
+leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
+                       nivel_geografico = c('UF incluindo rural',
+                                            'UF SEM incluir rural',
+                                            'Regiões da UF fora da RM SEM incluir rural',
+                                            'Região Metropolitana (RM)',
+                                            'RM exceto capital (Curitiba)',
+                                            'Capital (Curitiba)'))
+
+sheets <- list("leia_me" = leia.me,
+               "desp_01" = lst.despesas$estrato_uf_com_rural, 
+               "desp_02" = lst.despesas$estrato_uf_sem_rural,
+               "desp_03" = lst.despesas$estrato_uf_sem_rm_sem_rural,
+               "desp_04" = lst.despesas$estrato_rm,
+               "desp_05" = lst.despesas$estrato_rm_sem_capital,
+               "desp_06" = lst.despesas$estrato_capital,
                
-               "tipo_proc_estrato_uf_com_rural" = lst.ultra$estrato_uf_com_rural, 
-               "tipo_proc_estrato_uf_sem_rural" = lst.ultra$estrato_uf_sem_rural,
-               "tipo_proc_estrato_uf_sem_rm_sem_rural" = lst.ultra$estrato_uf_sem_rm_sem_rural,
-               "tipo_proc_estrato_rm" = lst.ultra$estrato_rm,
-               "tipo_proc_estrato_rm_sem_capital" = lst.ultra$estrato_rm_sem_capital,
-               "tipo_proc_estrato_capital" = lst.ultra$estrato_capital,
+               "tipo_proc_01" = lst.ultra$estrato_uf_com_rural,
+               "tipo_proc_02" = lst.ultra$estrato_uf_sem_rural,
+               "tipo_proc_03" = lst.ultra$estrato_uf_sem_rm_sem_rural,
+               "tipo_proc_04" = lst.ultra$estrato_rm,
+               "tipo_proc_05" = lst.ultra$estrato_rm_sem_capital,
+               "tipo_proc_06" = lst.ultra$estrato_capital,
                
-               "share_alim_estrato_uf_com_rural" = lst.decomp$estrato_uf_com_rural, 
-               "share_alim_estrato_uf_sem_rural" = lst.decomp$estrato_uf_sem_rural,
-               "share_alim_estrato_uf_sem_rm_sem_rural" = lst.decomp$estrato_uf_sem_rm_sem_rural,
-               "share_alim_estrato_rm" = lst.decomp$estrato_rm,
-               "share_alim_estrato_rm_sem_capital" = lst.decomp$estrato_rm_sem_capital,
-               "share_alim_estrato_capital" = lst.decomp$estrato_capital
+               "alim_dentro_fora_dom_01" = lst.decomp$estrato_uf_com_rural, 
+               "alim_dentro_fora_dom_02" = lst.decomp$estrato_uf_sem_rural,
+               "alim_dentro_fora_dom_03" = lst.decomp$estrato_uf_sem_rm_sem_rural,
+               "alim_dentro_fora_dom_04" = lst.decomp$estrato_rm,
+               "alim_dentro_fora_dom_05" = lst.decomp$estrato_rm_sem_capital,
+               "alim_dentro_fora_dom_06" = lst.decomp$estrato_capital,
+               
+               "consumo_alim_01" = lst.alimentos$estrato_uf_com_rural, 
+               "consumo_alim_02" = lst.alimentos$estrato_uf_sem_rural,
+               "consumo_alim_03" = lst.alimentos$estrato_uf_sem_rm_sem_rural,
+               "consumo_alim_04" = lst.alimentos$estrato_rm,
+               "consumo_alim_05" = lst.alimentos$estrato_rm_sem_capital,
+               "consumo_alim_06" = lst.alimentos$estrato_capital,
+               
+               "consumo_tipo_proc_01" = lst.alimentos$estrato_uf_com_rural, 
+               "consumo_tipo_proc_02" = lst.alimentos$estrato_uf_sem_rural,
+               "consumo_tipo_proc_03" = lst.alimentos$estrato_uf_sem_rm_sem_rural,
+               "consumo_tipo_proc_04" = lst.alimentos$estrato_rm,
+               "consumo_tipo_proc_05" = lst.alimentos$estrato_rm_sem_capital,
+               "consumo_tipo_proc_06" = lst.alimentos$estrato_capital
+               
                ) 
 
 write_xlsx(sheets, "F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Resultados/POF/pof_tabelas.xlsx")
