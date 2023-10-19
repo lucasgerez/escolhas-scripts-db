@@ -925,10 +925,9 @@ pof_alimentos_f <- function(uf, estrato, tipo_situacao_dom = 1) {
            consumo_comem = mean/pessoas_comem) %>% 
     filter(!is.na(Grupo_Processado)) %>% 
     group_by(Sexo) %>% 
-    mutate(share_pessoas_comem = round(100*pessoas_comem/pessoas,2),
-           share_consumo = round(100*consumo/sum(consumo),2)) %>%
-    select(Sexo, Grupo_Processado, share_pessoas_comem, share_consumo) %>%
-    pivot_wider(id_cols = Grupo_Processado, names_from = Sexo, values_from = c("share_pessoas_comem", "share_consumo"))
+    mutate(share_consumo = round(100*consumo/sum(consumo),2)) %>%
+    select(Sexo, Grupo_Processado, share_consumo) %>%
+    pivot_wider(id_cols = Grupo_Processado, names_from = Sexo, values_from = c("share_consumo"))
   
   
   # Share de consumo por grupo de alimento (faz sentido bebidas e infusões representarem 50%?) 
@@ -944,10 +943,9 @@ pof_alimentos_f <- function(uf, estrato, tipo_situacao_dom = 1) {
            consumo_comem = mean/pessoas_comem) %>% 
     filter(!is.na(Descricao_2)) %>% 
     group_by(Sexo) %>% 
-    mutate(share_pessoas_comem = round(100*pessoas_comem/pessoas,2),
-           share_consumo = round(100*consumo/sum(consumo),2)) %>%
-    select(Sexo, Descricao_2, share_pessoas_comem, share_consumo) %>%
-    pivot_wider(id_cols = Descricao_2, names_from = Sexo, values_from = c("share_pessoas_comem", "share_consumo"))
+    mutate(share_consumo = round(100*consumo/sum(consumo),2)) %>%
+    select(Sexo, Descricao_2, share_consumo) %>%
+    pivot_wider(id_cols = Descricao_2, names_from = Sexo, values_from = c("share_consumo"))
   
   
   lst.result <- list()
@@ -956,11 +954,13 @@ pof_alimentos_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   lst.result$tab_share_consumo <- tab_share_consumo
   
   
+  return(lst.result)
+  
 }
 
 
 lst.alimentos <- list()
-lst.ultra <- list()
+lst.ultra.share <- list()
 
 for (d in dimensoes) {
   
@@ -970,7 +970,7 @@ for (d in dimensoes) {
     
     lst_aux <- pof_alimentos_f(uf = uf, estrato = get(d), tipo_situacao_dom = c(1:2))
     
-    lst.ultra[[match(d, dimensoes)]] <- lst_aux$tab_ultra
+    lst.ultra.share[[match(d, dimensoes)]] <- lst_aux$tab_ultra
     lst.alimentos[[match(d, dimensoes)]] <- lst_aux$tab_share_consumo
     
     
@@ -978,7 +978,7 @@ for (d in dimensoes) {
     
     lst_aux <- pof_alimentos_f(uf = uf, estrato = get(d), tipo_situacao_dom = 1)
     
-    lst.ultra[[match(d, dimensoes)]] <- lst_aux$tab_ultra
+    lst.ultra.share[[match(d, dimensoes)]] <- lst_aux$tab_ultra
     lst.alimentos[[match(d, dimensoes)]] <- lst_aux$tab_share_consumo
     
   }
@@ -987,7 +987,7 @@ for (d in dimensoes) {
 }
 
 # nomes para facilitar
-names(lst.ultra) <- dimensoes
+names(lst.ultra.share) <- dimensoes
 names(lst.alimentos) <- dimensoes
 
 
@@ -1032,12 +1032,12 @@ sheets <- list("leia_me" = leia.me,
                "consumo_alim_05" = lst.alimentos$estrato_rm_sem_capital,
                "consumo_alim_06" = lst.alimentos$estrato_capital,
                
-               "consumo_tipo_proc_01" = lst.alimentos$estrato_uf_com_rural, 
-               "consumo_tipo_proc_02" = lst.alimentos$estrato_uf_sem_rural,
-               "consumo_tipo_proc_03" = lst.alimentos$estrato_uf_sem_rm_sem_rural,
-               "consumo_tipo_proc_04" = lst.alimentos$estrato_rm,
-               "consumo_tipo_proc_05" = lst.alimentos$estrato_rm_sem_capital,
-               "consumo_tipo_proc_06" = lst.alimentos$estrato_capital
+               "consumo_tipo_proc_01" = lst.ultra.share$estrato_uf_com_rural, 
+               "consumo_tipo_proc_02" = lst.ultra.share$estrato_uf_sem_rural,
+               "consumo_tipo_proc_03" = lst.ultra.share$estrato_uf_sem_rm_sem_rural,
+               "consumo_tipo_proc_04" = lst.ultra.share$estrato_rm,
+               "consumo_tipo_proc_05" = lst.ultra.share$estrato_rm_sem_capital,
+               "consumo_tipo_proc_06" = lst.ultra.share$estrato_capital
                
                ) 
 
