@@ -925,7 +925,7 @@ pof_alimentos_f <- function(uf, estrato, tipo_situacao_dom = 1) {
            consumo_comem = mean/pessoas_comem) %>% 
     filter(!is.na(Grupo_Processado)) %>% 
     group_by(Sexo) %>% 
-    mutate(share_consumo = round(100*consumo/sum(consumo),2)) %>%
+    mutate(share_consumo = round(consumo/sum(consumo),2)) %>%
     select(Sexo, Grupo_Processado, share_consumo) %>%
     pivot_wider(id_cols = Grupo_Processado, names_from = Sexo, values_from = c("share_consumo"))
   
@@ -943,7 +943,7 @@ pof_alimentos_f <- function(uf, estrato, tipo_situacao_dom = 1) {
            consumo_comem = mean/pessoas_comem) %>% 
     filter(!is.na(Descricao_2)) %>% 
     group_by(Sexo) %>% 
-    mutate(share_consumo = round(100*consumo/sum(consumo),2)) %>%
+    mutate(share_consumo = round(consumo/sum(consumo),2)) %>%
     select(Sexo, Descricao_2, share_consumo) %>%
     pivot_wider(id_cols = Descricao_2, names_from = Sexo, values_from = c("share_consumo"))
   
