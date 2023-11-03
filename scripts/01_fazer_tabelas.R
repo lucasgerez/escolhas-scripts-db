@@ -30,10 +30,12 @@ pof <- pof %>%
 
 rmsp <- 3501:3515
 
-nome_tabela <- "/pof_tabelas_curitiba.xlsx"
+brasil <- 0001:9999
+
+nome_tabela <- "/pof_tabelas_rm_curitiba.xlsx"
 
 pof_sp <- f_xtile_filter(pof, variavel = "PC_RENDA_DISP", var_peso = "peso_final_fam",
-                         nova_var = "decis", n = 10, estrato = estrato_capital )  %>%
+                         nova_var = "decis", n = 10, estrato = estrato_capital  )  %>%
   filter(!is.na(decis))
 #nrow(pof_sp) só perde 1 obs do Paraná com o filtro
 pof_sp_svy <- as_survey(svydesign(ids = ~COD_UPA, strata = ~ESTRATO_POF , weights = ~peso_final_fam, data = pof_sp))

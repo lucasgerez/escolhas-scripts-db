@@ -118,7 +118,9 @@ aluguel <- readRDS("ALUGUEL_ESTIMADO.rds")
 
 # Tradutor de despesas
 tradutor_desp <- readxl::read_excel("Tradutor_Despesa_Geral.xls", range = "A1:O5319") %>%
-  filter(Variavel == "V8000_DEFLA")
+  filter(Variavel == "V8000_DEFLA") %>%
+  mutate(check_merge = 1,
+         Codigo = as.integer(Codigo))
 
 # Função para estimar valor total:
 f_valor_mensal <- function(df, nome_var) {
@@ -127,13 +129,14 @@ f_valor_mensal <- function(df, nome_var) {
     df$V9011 <- 1
   }
   
+  df$V9011[is.na(df$V9011) & !is.na(df$V8000_DEFLA)] <- 1
+  
   df[[nome_var]] <- (df$V8000_DEFLA * df$FATOR_ANUALIZACAO * df$V9011) /12
   
-  df$V9011[is.na(df$V9011) & !is.na(df$V8000_DEFLA)] <- 1
   
   df <- df %>%
     mutate(
-           Codigo = round(V9001/100)) %>%
+           Codigo = as.integer(floor(V9001/100))) %>%
     left_join(tradutor_desp, by = "Codigo") %>%
     mutate(monetaria = if_else(V9002 <= 6, 1, 0),
            grupo_consumo = case_when(
@@ -143,7 +146,7 @@ f_valor_mensal <- function(df, nome_var) {
              Descricao_3=="Transporte" ~ 4, 
              Descricao_3=="Higiene e cuidados pessoais" ~ 5,
              Descricao_3=="Assistencia a saude" ~ 6,
-             Descricao_3=="Educacao" ~ 6,
+             Descricao_3=="Educacao" ~ 7,
              Descricao_3=="Recreação e cultura" ~ 8,
              Descricao_3=="Fumo" ~ 9,
              Descricao_3=="Serviços pessoais" ~ 10, 
