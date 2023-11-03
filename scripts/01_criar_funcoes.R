@@ -5,13 +5,13 @@
 # 30 de outubro de 2023 (YYYYMMDD = 20231030)
 
 # preambulo -------------------------------------------
-rm(list = ls())
+# rm(list = ls())
 
 # Caminho para os dados da POF: 
-setwd('C:/Users/ricar/Documents/consultoria/gerez/dados pof')
-
-# Caminho para exportar as tabelas
-export <- 'C:/Users/ricar/Documents/consultoria/gerez/resultados'
+# setwd('C:/Users/ricar/Documents/consultoria/gerez/dados pof')
+# 
+# # Caminho para exportar as tabelas
+# export <- 'C:/Users/ricar/Documents/consultoria/gerez/resultados'
 
 # pacotes
 library(dplyr)
@@ -40,6 +40,40 @@ f_xtile_filter <- function(df, variavel, var_peso, nova_var, n, estrato) {
   return(df)
   
 }
+
+
+# Calculo da renda pc 
+f_inc_dist_filter <- function(pof_svy, variavel, var_peso, nova_var, n, estrato) {
+  
+  options(warn = -1)
+  
+  # Cálculo da Renda dom pc total
+  
+  aux <- pof_svy %>%
+    summarise(renda_dom_pc_disp = survey_mean( PC_RENDA_DISP,  na.rm = TRUE)) %>%
+    select(renda_dom_pc_disp) %>%
+    as.data.frame()
+  
+  df <- pof_svy$variables
+  
+  x <- 1 / n
+  
+  df <- filter(df, ESTRATO_POF %in% estrato)
+  
+  percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
+  
+  tab <- data.frame(decis = 1:(n+1), renda_dom_pc_disp = c(percentis[-1], aux$renda_dom_pc_disp))
+  
+  tab$renda_dom_pc_disp <- paste0("R$ ", prettyNum(round(tab$renda_dom_pc_disp,0), big.mark = ".", small.mark = ","))
+  tab$renda_dom_pc_disp[1] <- paste0("Até ", tab$renda_dom_pc_disp[1])
+  tab$renda_dom_pc_disp[10] <- paste0("Acima de ", tab$renda_dom_pc_disp[9])
+  tab$decis[11] <- 'Total'
+  
+  return(tab)
+  
+}
+
+
 
 
 # Apenas as médias por decis --------------------------------------------------#

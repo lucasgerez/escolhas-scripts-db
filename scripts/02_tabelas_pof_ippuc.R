@@ -71,11 +71,11 @@ dimensoes <- c('estrato_uf_com_rural', 'estrato_uf_sem_rural',
                'estrato_rm_sem_capital', 'estrato_capital')
 
 # PARÂMETROS A SEREM DEFINIDOS:
-  # NÚMERO DE PERCENTIS DA ANÁLISE
-  # QUAL A VARIÁVEL QUE VAI DEFINIR OS PERCENTIS
-  # QUAL O PESO
-  # QUAL ESTRATO VAI SER UTILIZADO
-  # QUAL O NOME DA TABELA DE OUTPUT
+# NÚMERO DE PERCENTIS DA ANÁLISE
+# QUAL A VARIÁVEL QUE VAI DEFINIR OS PERCENTIS
+# QUAL O PESO
+# QUAL ESTRATO VAI SER UTILIZADO
+# QUAL O NOME DA TABELA DE OUTPUT
 
 # Corrigindo a renda per capita monetária e não monetária
 pof <- pof %>%
@@ -95,7 +95,7 @@ for (d in dimensoes) {
   # Incluindo a informação de decil e já filtrando para o estrato desejado
   pof_estrato <- f_xtile_filter(pof, variavel = "PC_RENDA_DISP", var_peso = "peso_final_fam",
                                 nova_var = "decis", n = 10, estrato = get(d) )  %>%
-                 filter(!is.na(decis))
+    filter(!is.na(decis))
   
   # Definindo o data.frame como objeto amostral
   pof_svy <- as_survey(svydesign(ids = ~COD_UPA, strata = ~ESTRATO_POF , weights = ~peso_final_fam, data = pof_estrato))
@@ -160,7 +160,6 @@ sheets <- list("leia_me" = leia.me,
 
 library(openxlsx)
 write.xlsx(sheets, "F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Resultados/POF/pof_tabelas_grandes_grupos.xlsx")
-
 
 
 
