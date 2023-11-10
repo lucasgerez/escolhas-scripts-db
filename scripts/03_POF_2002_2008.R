@@ -1,16 +1,15 @@
 
 # Tabelas para as POFs de 2002 e 2008
-
 library(dplyr)
 library(janitor)
 library(survey)
 library(srvyr)
+library(openxlsx)
 
 
 # fonte
 # https://github.com/CaoBittencourt/Data-Science-Python/blob/main/pof_2008.rar
 
-# testinho aqui (pode dar bem bom esse aquivo aqui!)
 
 pof_2002 <- read.csv('F:/Drive/BASES DE DADOS BRUTOS/POF/POF 2002-2003/raw/pof_2002.csv') %>% clean_names()
 
@@ -25,15 +24,14 @@ pof_2002$ano <- 2002
 pof_2008$ano <- 2008
 
 # Vamos renomear algumas variaveis de 2008 para facilitar
-
 pof_2008 <- pof_2008 %>% 
   rename(uf = cod_uf, 
          estrato = cod_domc,
          n_morador = qtd_morador_domc,
          fator = fator_expansao2,
          domcl = cod_tipo_domc,
-         quant_uc = qtd_uc)
-
+         quant_uc = qtd_uc,
+         renda_per_capita = renda_total_per_capita)
 
 
 # Juntando as duas POFs
@@ -51,13 +49,13 @@ pof <- pof %>%
   )) %>% 
   mutate(estrato_pof = as.numeric(estrato_pof),
          peso_fam = n_morador*fator, 
-         COD_UPA = paste0(uf, estrato_pof, tipo_reg, domcl, id_dom, quant_uc)
-         ) 
+         COD_UPA = as.numeric(paste0(uf, estrato_pof,
+                                     tipo_reg, domcl, id_dom, quant_uc))) 
   
-  
-
 # Vamos ficar apenas com as variáveis que fazer sentido
-pof_res <- pof %>% select(uf, estrato_pof, tipo_reg, domcl, id_dom, quant_uc,
+pof_res <- pof %>% select(ano, uf, estrato_pof,
+                          tipo_reg, domcl, 
+                          id_dom, quant_uc,
                           peso_fam, COD_UPA,
                           despesas_mensais_totais_per_capita, 
                           despesas_mensais_alimentacao_per_capita,
@@ -65,91 +63,147 @@ pof_res <- pof %>% select(uf, estrato_pof, tipo_reg, domcl, id_dom, quant_uc,
                           despesas_mensais_transporte_per_capita, 
                           despesas_mensais_emprestimos_per_capita,
                           despesas_mensais_saude_per_capita,
-                          renda_total_per_capita)
+                          renda_per_capita)
 
 
+## Funções necessárias para as tabelas ----
 
+# Caminho git
+git_path <- 'C:/Users/user/Projetos_GIT/escolhas-scripts-db'
 
-# Transformando o arquivo em survey  
-pof_2002_2008_svy <- as_survey(svydesign(ids = ~COD_UPA, strata = ~estrato_pof , weights = ~peso_fam, data = pof_res))
+# Vamos rodar as funções no Git
+source(file.path( git_path, "scripts/01_criar_funcoes.R" ), encoding = 'UTF-8')
 
-# Decil de renda
+anos <- c(2002,2008)
 
+# Arranjos geográficos a serem definidos
+estrato_uf_com_rural        <- 4101:4135
+estrato_uf_sem_rural        <- 4101:4124
+estrato_uf_sem_rm_sem_rural <- 4108:4124
+estrato_rm                  <- 4101:4108
+estrato_rm_sem_capital      <- 4106:4108
+estrato_capital             <- 4101:4105
 
-# Função para a POF de 2002 a 2008
+# Todos os estratos que faremos
+dimensoes <- c('estrato_uf_com_rural', 'estrato_uf_sem_rural',
+               'estrato_uf_sem_rm_sem_rural', 'estrato_rm',
+               'estrato_rm_sem_capital', 'estrato_capital')
 
-# Calculo da renda pc 
-f_inc_dist_filter_2002_2008 <- function(pof_svy, variavel, var_peso, nova_var, n, estrato) {
+lst.years <- list()
+
+for (y in anos) {
   
-  options(warn = -1)
+  cat('\nBase para o ano', y)
   
-  # Cálculo da Renda dom pc total
+  lst.tab <- list()
   
-  aux <- pof_svy %>%
-    summarise(renda_dom_pc_disp = survey_mean( PC_RENDA_DISP,  na.rm = TRUE)) %>%
-    select(renda_dom_pc_disp) %>%
-    as.data.frame()
+  for (d in dimensoes) {
+    
+    cat('\n  Dimensão', d, paste(Sys.time()))
+    
+    # Tabelas 
+    
+    # Caso tenha apenas uma observação, vamos duplicá-la para não perder
+    
+    # Incluindo a informação de decil e já filtrando para o estrato desejado
+    pof_estrato <- f_xtile_filter_2002_2008(pof_res[pof_res$ano == y,], 
+                                            variavel = "renda_per_capita",
+                                            var_peso = "peso_fam",
+                                            nova_var = "decis", 
+                                            n = 10, 
+                                            estrato = get(d) )  %>% # 
+                    filter(!is.na(decis))
+    
+    aux <- pof_estrato %>% 
+      group_by(estrato_pof) %>% 
+      summarise(n = n()) %>% 
+      filter(n > 1 )
+    
+    pof_estrato <- pof_estrato %>% filter(estrato_pof %in% aux$estrato_pof )
+    
+    # Definindo o data.frame como objeto amostral
+    # Transformando o arquivo em survey  
+    pof_svy <- as_survey(svydesign(ids = ~COD_UPA, 
+                                   strata = ~estrato_pof,
+                                   weights = ~peso_fam, 
+                                   data = pof_estrato, 
+                                   check.strata = TRUE))
+    
+    
+    # Renda domiciliar per capita disponível
+    tab_renda <- f_inc_dist_filter_2002_2008(pof_svy = pof_svy, 
+                                             variavel = "renda_per_capita", 
+                                             var_peso = "peso_fam",
+                                             nova_var = "decis", 
+                                             n = 10, 
+                                             estrato = get(d) ) # get(d)
+    
+    t1 <- f_medias_2002_2008(pof_svy, decis)
+    pof_svy$variables$um <- 999 # para o total
+    t1b <- f_medias_2002_2008(pof_svy, um)
+    names(t1b)[1] <- "decis"
+    t1b$decis <- 'Total'
+    t1 <- rbind(t1, t1b) 
+    
+    
+    # Juntando tabela 1, 2 e 3
+    lst.tab[[match(d, dimensoes)]] <- 
+      tab_renda %>% 
+      left_join(t1, by = 'decis') 
+      
+    
+  }
   
-  df <- pof_svy$variables
+  # nomes para facilitar
+  names(lst.tab) <- dimensoes
   
-  x <- 1 / n
+  leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
+                         nivel_geografico = c('UF incluindo rural',
+                                              'UF SEM incluir rural',
+                                              'Regiões da UF fora da RM SEM incluir rural',
+                                              'Região Metropolitana (RM)',
+                                              'RM exceto capital (Curitiba)',
+                                              'Capital (Curitiba)'))
   
-  df <- filter(df, ESTRATO_POF %in% estrato)
-  
-  percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
-  
-  tab <- data.frame(decis = 1:(n+1), renda_dom_pc_disp = c(percentis[-1], aux$renda_dom_pc_disp))
-  
-  tab$renda_dom_pc_disp <- paste0("R$ ", prettyNum(round(tab$renda_dom_pc_disp,0), big.mark = ".", small.mark = ","))
-  tab$renda_dom_pc_disp[1] <- paste0("Até ", tab$renda_dom_pc_disp[1])
-  tab$renda_dom_pc_disp[10] <- paste0("Acima de ", tab$renda_dom_pc_disp[9])
-  tab$decis[11] <- 'Total'
-  
-  return(tab)
+  lst.years[[match(y, anos)]] <- lst.tab
   
 }
 
+names(lst.years) <- c("y_2002", "y_2008")
+
+
+# Feito isso vamos explortar as tabelas
+
+leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
+                       nivel_geografico = c('UF incluindo rural',
+                                            'UF SEM incluir rural',
+                                            'Regiões da UF fora da RM SEM incluir rural',
+                                            'Região Metropolitana (RM)',
+                                            'RM exceto capital (Curitiba)',
+                                            'Capital (Curitiba)'))
+
+sheets <- list("leia_me" = leia.me,
+               "desp_01_2002" = lst.years$y_2002$estrato_uf_com_rural, 
+               "desp_02_2002" = lst.years$y_2002$estrato_uf_sem_rural,
+               "desp_03_2002" = lst.years$y_2002$estrato_uf_sem_rm_sem_rural,
+               "desp_04_2002" = lst.years$y_2002$estrato_rm,
+               "desp_05_2002" = lst.years$y_2002$estrato_rm_sem_capital,
+               "desp_06_2002" = lst.years$y_2002$estrato_capital,
+               
+               "desp_01_2008" = lst.years$y_2008$estrato_uf_com_rural, 
+               "desp_02_2008" = lst.years$y_2008$estrato_uf_sem_rural,
+               "desp_03_2008" = lst.years$y_2008$estrato_uf_sem_rm_sem_rural,
+               "desp_04_2008" = lst.years$y_2008$estrato_rm,
+               "desp_05_2008" = lst.years$y_2008$estrato_rm_sem_capital,
+               "desp_06_2008" = lst.years$y_2008$estrato_capital
+               )
+
+
+write.xlsx(sheets, "F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Resultados/POF/pof_tabelas_grandes_grupos_2002_2008.xlsx")
 
 
 
 
-
-# Vamos fazer a conta das despesas totais 
-pof %>% 
-  filter(estrato_pof %in% 4101:4105) %>% 
-  mutate(peso_fam = ifelse(ano == 2002, n_morador*fator, qtd_morador_domc*fator_expansao2 ) ) %>% 
-  group_by(ano) %>% 
-  summarise(pessoas_milhoes = sum(peso_fam)/10^6, 
-            desp_total = weighted.mean( despesas_mensais_totais_per_capita, w = peso_fam ),
-            desp_alimentos = weighted.mean( despesas_mensais_alimentacao_per_capita, w = peso_fam ),
-            desp_hab = weighted.mean( despesas_mensais_moradia_per_capita, w = peso_fam ),
-            desp_transporte = weighted.mean( despesas_mensais_transporte_per_capita, w = peso_fam )
-  )
-
-
-
-pof %>% group_by(ano) %>% summary()
-
-
-# Nessa primeira etapa vamos fazer para o ano de 2022 q sabemos onde fica os stratos
-
-pof %>% filter(ano == 2008) %>% select(cod_uf, perd_cod_p_visit_realm_em, estrato_pof) %>% head()
-
-
-pof %>% 
-  # filter(cod_uf == 41 | uf == 41) %>%
-  filter(estrato_pof %in% 4101:4135) %>% 
-  group_by(ano) %>% 
-  summarise(sum(n_morador*fator)/10^6,
-            sum(qtd_morador_domc*fator_expansao1)/10^6) 
-
-
-
-pof %>% group_by(ano) %>%  summarise(sum(estrato)) 
-
-
-  
-  
 
 
 
