@@ -466,9 +466,8 @@ tabela_ultra_pc_pof_f <- function(uf, estrato, tipo_situacao_dom = 1) {
   # Informação de alimentação 
   tradutor_alimentacao <- readxl::read_excel("../Tradutores_de_Tabela/Tradutor_Alimentação.xls") 
   
-  
-  ### Tabelas de tradutores para ultra processados 
-  tradutor_ultra <- readxl::read_excel("../Tradutores_de_Tabela/Cadastro de Produtos POF 2019.xlsx", range = "A1:D8322") 
+  ### Tabelas de tradutores para ultra processados (v2 atualizado pela Elizandra)
+  tradutor_ultra <- readxl::read_excel("../Tradutores_de_Tabela/Cadastro de Produtos POF 2019-V2.xlsx", range = "A1:D8322") 
   
   # Vamos ficar apenas com os que possuem informações
   names(tradutor_ultra) <- c('quadro', 'V9001', 'Desc', 'Grupo_Processado')
