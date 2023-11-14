@@ -1,7 +1,8 @@
 
+cat('O presente Script precisa ser rodado após o tratamento de dados da POF com despesas')
 
 # Será que vale a última tentativa com os dados de consumo?
-cat('Tratamento dos dados de ingestão de alimentos da POF a nível de familia')
+cat('\nTratamento dos dados de ingestão de alimentos da POF a nível de familia')
 
 # pacotes
 library(dplyr)
@@ -14,27 +15,6 @@ var_dom <- c("UF", "ESTRATO_POF", "TIPO_SITUACAO_REG",
              "COD_UPA", "NUM_DOM", "NUM_UC")
 
 # Vamos atribuir o percentil da renda domiciliar per capita por habitante 
-# Caminho git
-git_path <- 'C:/Users/user/Projetos_GIT/escolhas-scripts-db'
-
-# Vamos rodar as funções no Git
-source(file.path( git_path, "scripts/01_criar_funcoes.R" ),encoding = 'UTF-8')
-
-# Base de dados consolidadas
-pof <- readRDS( file.path( git_path, "data/despesas_por_grupos_POF.RDS") )
-
-pof <- pof %>%
-  mutate( v1 = if_else(is.na(PC_RENDA_MONET), 0, PC_RENDA_MONET),
-          v2 = if_else(is.na(PC_RENDA_NAO_MONET), 0, PC_RENDA_NAO_MONET),
-          PC_RENDA_TOTAL = v1 + v2) %>% 
-  select(-v1, -v2)
-
-# Reduzindo o numero de variáveis da POF com enfoque no consumo alimentar
-pof <- pof %>% select(var_dom, PC_RENDA_DISP, pessoas_dom, peso_final_fam)
-
-
-# Retringindo para a região de interesse
-
 
 # Queremos pegar a base consumo alimentar colocar o consumo total em formato wide na base morador_df
 microdados_path <- 'F:/Drive/BASES DE DADOS BRUTOS/POF/POF 2017-2018/Microdados/Dados'
@@ -65,8 +45,11 @@ tradutor_alimentacao <- tradutor_alimentacao %>% left_join(tradutor_ultra, by = 
 CONSUMO_ALIMENTAR <- CONSUMO_ALIMENTAR %>% left_join(tradutor_alimentacao, by = 'V9001')
 
 
-
 # A partir daqui entra as funções -----------------------------------------
+
+estrato  <- 4101:4105
+
+# Depois de muitos testes, chegamos a conclusão de que não é possível fazer o consumo em nutrientes por decis de renda
 
 # Caminho git
 git_path <- 'C:/Users/user/Projetos_GIT/escolhas-scripts-db'
@@ -74,12 +57,40 @@ git_path <- 'C:/Users/user/Projetos_GIT/escolhas-scripts-db'
 # Vamos rodar as funções no Git
 source(file.path( git_path, "scripts/01_criar_funcoes.R" ),encoding = 'UTF-8')
 
+# Base de dados consolidadas
+pof <- readRDS( file.path( git_path, "data/despesas_por_grupos_POF.RDS") )
 
-estrato  <- 4101:4105
+pof <- pof %>%
+  mutate( v1 = if_else(is.na(PC_RENDA_MONET), 0, PC_RENDA_MONET),
+          v2 = if_else(is.na(PC_RENDA_NAO_MONET), 0, PC_RENDA_NAO_MONET),
+          PC_RENDA_TOTAL = v1 + v2) %>% 
+  select(-v1, -v2)
+
+# Reduzindo o numero de variáveis da POF com enfoque no consumo alimentar
+pof <- pof %>% select(var_dom, PC_RENDA_DISP, pessoas_dom, peso_final_fam)
+
 
 pof_estrato <- f_xtile_filter(pof, variavel = "PC_RENDA_DISP", var_peso = "peso_final_fam",
                               nova_var = "decis", n = 10, estrato = estrato  )  %>% # get(d)
   filter(!is.na(decis))
+
+
+# Vamos checar pq não está dando certo com o merge 
+df_consumo <- 
+  CONSUMO_ALIMENTAR %>% 
+  group_by(across(all_of(var_dom))) %>%
+  summarise( ENERGIA_KCAL_pc = sum(ENERGIA_KCAL) ) %>% 
+  left_join(pof_estrato, by = var_dom) %>%
+  mutate(ENERGIA_KCAL_pc = ENERGIA_KCAL_pc/pessoas_dom) %>% 
+  filter(!is.na(pessoas_dom))
+
+
+# Checando quais tem o id do estrado
+
+df_consumo %>% 
+  left_join(pof_estrato[,c(var_dom,'decis')], by = var_dom) %>%
+  filter(!is.na(decis)) %>% nrow()
+
 
 
 
@@ -87,13 +98,14 @@ pof_estrato <- f_xtile_filter(pof, variavel = "PC_RENDA_DISP", var_peso = "peso_
 
 df_aux <- CONSUMO_ALIMENTAR %>%
   group_by(across(all_of(var_dom))) %>%
-  summarise( ENERGIA_KCAL_pc = sum(ENERGIA_KCAL),
-             GRAMATURA1 = sum(GRAMATURA1))  
+  summarise( ENERGIA_KCAL_pc = sum(ENERGIA_KCAL))  
 
 df_consumo <- pof_estrato  %>% 
-  left_join(df_aux, by = var_dom) %>%
-  mutate(ENERGIA_KCAL_pc = ENERGIA_KCAL_pc/pessoas_dom,
-         GRAMATURA1_pc = GRAMATURA1/pessoas_dom)
+  full_join(df_aux, by = var_dom) %>%
+  mutate(ENERGIA_KCAL_pc = ENERGIA_KCAL_pc/pessoas_dom) %>%
+  filter(!is.na(peso_final_fam))
+
+
 
 
 pof_svy <- as_survey(svydesign(ids = ~COD_UPA, 
@@ -102,9 +114,9 @@ pof_svy <- as_survey(svydesign(ids = ~COD_UPA,
                                data = df_consumo))
 
 pof_svy %>%
-  group_by(decis) %>%
-  summarise(ENERGIA_KCAL_pc = survey_mean( ENERGIA_KCAL_pc,  na.rm = TRUE),
-            GRAMATURA1_pc = survey_mean( GRAMATURA1_pc,  na.rm = TRUE)) %>%
+  # group_by(decis) %>%
+  summarise(ENERGIA_KCAL_pc = survey_mean( ENERGIA_KCAL_pc,  na.rm = TRUE)
+            ) %>%
   select(-(ends_with("_se"))) %>%
   as.data.frame()
 
@@ -120,11 +132,12 @@ df_consumo <-
                names_from = Grupo_Processado, 
                names_prefix = 'grupo_proc_',  
                values_from = ENERGIA_KCAL_pc) %>%
-  left_join(pof, by = var_dom) %>%
+  left_join(pof[pof$UF == 41,], by = var_dom) %>%
   mutate(ENERGIA_KCAL_pc_natura = grupo_proc_1/pessoas_dom,
          ENERGIA_KCAL_pc_ing_culin = grupo_proc_2/pessoas_dom,
          ENERGIA_KCAL_pc_process = grupo_proc_3/pessoas_dom,
-         ENERGIA_KCAL_pc_ultra = grupo_proc_4/pessoas_dom)
+         ENERGIA_KCAL_pc_ultra = grupo_proc_4/pessoas_dom) %>%
+  filter(!is.na(peso_final_fam))
 
 # De-para dos grupos: 
 
