@@ -174,6 +174,7 @@ f_valor_mensal <- function(df, nome_var) {
            ) %>%
     as.data.frame()
     
+  return(df)
   
 }
 

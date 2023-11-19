@@ -27,11 +27,11 @@ library(srvyr)
 
 
 # Função para a POF de 2002 a 2008
-f_xtile_filter_2002_2008 <- function(df, variavel, var_peso, nova_var, n, estrato) {
+f_xtile_filter_2002_2008 <- function(df, variavel, var_peso, nova_var, n, estrato, estrato_var_name = 'estrato_pof') {
   
   x <- 1 / n
   
-  df <- filter(df, estrato_pof %in% estrato)
+  df <- filter(df, {{estrato_var_name}} %in% estrato)
   
   percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
   df[[nova_var]] <- cut(df[[variavel]], 
@@ -45,13 +45,14 @@ f_xtile_filter_2002_2008 <- function(df, variavel, var_peso, nova_var, n, estrat
 
 
 # Calculo da renda pc 
-f_inc_dist_filter_2002_2008 <- function(pof_svy, variavel, var_peso, nova_var, n, estrato) {
+f_inc_dist_filter_2002_2008 <- function(pof_svy, variavel, var_peso, nova_var, n, estrato, 
+                                        estrato_var_name = 'estrato_pof') {
   
   options(warn = -1)
   
   # Cálculo da Renda dom pc total
   aux <- pof_svy %>%
-    summarise(renda_dom_pc_disp = survey_mean( renda_per_capita,  na.rm = TRUE)) %>%
+    summarise(renda_dom_pc_disp = survey_mean( get(variavel),  na.rm = TRUE)) %>%
     select(renda_dom_pc_disp) %>%
     as.data.frame()
   
@@ -59,7 +60,7 @@ f_inc_dist_filter_2002_2008 <- function(pof_svy, variavel, var_peso, nova_var, n
   
   x <- 1 / n
   
-  df <- filter(df, estrato_pof %in% estrato)
+  df <- filter(df, {{estrato_var_name}} %in% estrato)
   
   percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
   
@@ -99,16 +100,19 @@ f_medias_2002_2008 <- function(df, percentis) {
 
 f_medias_2018 <- function(df, percentis) {
   
-  
+  # Vamos substituir os missings por zero
+  df$variables[is.na(df$variables)] <- 0
   
   df <- df %>%
     group_by({{percentis}}) %>%
-    summarise(despesa_total = survey_mean( desp_total_pc,  na.rm = TRUE),
-              despesa_alimentos = survey_mean( desp_pc_g1,  na.rm = TRUE),
-              despesa_habitacao = survey_mean( desp_pc_g2,  na.rm = TRUE),
-              despesa_transporte = survey_mean( desp_pc_g4,  na.rm = TRUE),
-              despesa_saude = survey_mean( desp_pc_g6,  na.rm = TRUE),
-              despesa_emprestimo = survey_mean( desp_pc_g19,  na.rm = TRUE)
+    summarise(despesa_total = survey_mean( sum_desp_nivel3/pessoas_dom,  na.rm = TRUE),
+              despesa_alimentos = survey_mean( pc_desp_nivel3_Alimentacao,  na.rm = TRUE),
+              despesa_alimentos_no_dom = survey_mean( pc_desp_nivel4_Alimentacao_no_dom,  na.rm = TRUE),
+              despesa_alimentos_fora_dom = survey_mean( pc_desp_nivel4_Alimentacao_fora_dom,  na.rm = TRUE),
+              despesa_habitacao = survey_mean( pc_desp_nivel3_Habitacao,  na.rm = TRUE),
+              despesa_transporte = survey_mean( pc_desp_nivel3_Transporte,  na.rm = TRUE),
+              despesa_saude = survey_mean( pc_desp_nivel3_Saude,  na.rm = TRUE),
+              despesa_emprestimo = survey_mean( pc_desp_nivel3_emprestimo,  na.rm = TRUE)
     ) %>%
     mutate(despesa_outras = despesa_total - (despesa_alimentos + despesa_habitacao +
                                                despesa_transporte + despesa_saude + 
@@ -120,6 +124,208 @@ f_medias_2018 <- function(df, percentis) {
   return(df)
   
 }
+
+f_alimentos_no_dom_2018 <- function(df, percentis) {
+  
+  # Vamos substituir os missings por zero
+  df$variables[is.na(df$variables)] <- 0
+  
+  # Bloco 1: cálculo do valor despendido
+  df <- df %>%
+    group_by({{percentis}}) %>% # {{percentis}}
+    summarise(careais = survey_mean( pc_desp_nivel5_dentro_dom_cereais,  na.rm = TRUE),
+              farinhas = survey_mean( pc_desp_nivel5_dentro_dom_farinhas_e_massas,  na.rm = TRUE),
+              tuberculos = survey_mean( pc_desp_nivel5_dentro_dom_tuberculos_raizes,  na.rm = TRUE),
+              acucares = survey_mean( pc_desp_nivel5_dentro_dom_acucares_e_derivados,  na.rm = TRUE),
+              verduras = survey_mean( pc_desp_nivel5_dentro_dom_legumes_e_verduras,  na.rm = TRUE),
+              frutas = survey_mean( pc_desp_nivel5_dentro_dom_frutas,  na.rm = TRUE),
+              carnes_pescados = survey_mean( pc_desp_nivel5_dentro_dom_carnes_e_pescados,  na.rm = TRUE),
+              aves_ovos = survey_mean( pc_desp_nivel5_dentro_dom_aves_e_ovos,  na.rm = TRUE),
+              leites_derivados = survey_mean( pc_desp_nivel5_dentro_dom_leites_e_derivados,  na.rm = TRUE),
+              panificados = survey_mean( pc_desp_nivel5_dentro_dom_panificados,  na.rm = TRUE),
+              oleos_gorduras = survey_mean( pc_desp_nivel5_dentro_dom_oleos_e_gorduras,  na.rm = TRUE),
+              bebidas_infusoes = survey_mean( pc_desp_nivel5_dentro_dom_bebidas_e_infusoes,  na.rm = TRUE),
+              elatados = survey_mean( pc_desp_nivel5_dentro_dom_enlatados,  na.rm = TRUE),
+              sal = survey_mean( pc_desp_nivel5_dentro_dom_sal,  na.rm = TRUE),
+              preparados = survey_mean( pc_desp_nivel5_dentro_dom_alimentos_preparados,  na.rm = TRUE),
+              outros = survey_mean( pc_desp_nivel5_dentro_dom_outros,  na.rm = TRUE)) %>%
+    select(-(ends_with("_se"))) %>%
+    as.data.frame()
+  
+  # Formato final 
+  df_t <- t(df)
+  df_t <- df_t[-1,] %>% as.data.frame()
+  colnames(df_t) <- c(1:ncol(df_t))
+  
+  # Vamos então fazer a conta do percentual do gasto com cada grupo de alimento
+  col_sums <- colSums(df_t)
+  
+  # Create a new data frame for percentages
+  percentage_df <- as.data.frame(apply(df_t, 1, function(col) col / col_sums * 100))
+  percentage_df <- round(percentage_df,2)
+  
+  
+  if (ncol(percentage_df) == 1) {
+    
+    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
+    colnames(percentage_df) <- c('grupo', 'Total')
+    
+  } else {
+    
+    # Aqui temos que transpor antes
+    percentage_df <- t(percentage_df)
+    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
+    colnames(percentage_df) <- c('grupo', 1:(ncol(percentage_df)-1))
+    
+  }
+  
+  
+  return(percentage_df)
+  
+}
+
+f_alimentos_fora_dom_2018 <- function(df, percentis) {
+  
+  # Vamos substituir os missings por zero
+  df$variables[is.na(df$variables)] <- 0
+  
+  
+  # Bloco 1: cálculo do valor despendido
+  df <- df %>%
+    group_by({{percentis}}) %>% # {{percentis}}
+    summarise(almoco_jantar = survey_mean( pc_desp_nivel5_fora_dom_almoco_e_jantar,  na.rm = TRUE),
+              lanches = survey_mean( pc_desp_nivel5_fora_dom_lanches,  na.rm = TRUE),
+              cafe_leite_choco = survey_mean( pc_desp_nivel5_fora_dom_cafe_leite_choco,  na.rm = TRUE),
+              sand_salgados = survey_mean( pc_desp_nivel5_fora_dom_sanduiches_e_salgados,  na.rm = TRUE),
+              beb_alcoolicas = survey_mean( pc_desp_nivel5_fora_dom_cervejas_e_outras_alcoólicas,  na.rm = TRUE),
+              outras = survey_mean( pc_desp_nivel5_fora_dom_refri_e_outras_nao_alcooicas,  na.rm = TRUE),
+              outras = survey_mean( pc_desp_nivel5_fora_dom_outras,  na.rm = TRUE),
+              ) %>%
+    select(-(ends_with("_se"))) %>%
+    as.data.frame()
+  
+  # Formato final 
+  df_t <- t(df)
+  df_t <- df_t[-1,] %>% as.data.frame()
+  colnames(df_t) <- c(1:ncol(df_t))
+  
+  # Vamos então fazer a conta do percentual do gasto com cada grupo de alimento
+  col_sums <- colSums(df_t)
+  
+  # Create a new data frame for percentages
+  percentage_df <- as.data.frame(apply(df_t, 1, function(col) col / col_sums * 100))
+  percentage_df <- round(percentage_df,2)
+  
+  
+  
+  if (ncol(percentage_df) == 1) {
+    
+    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
+    colnames(percentage_df) <- c('grupo', 'Total')
+    
+  } else {
+    
+    # Aqui temos que transpor antes
+    percentage_df <- t(percentage_df)
+    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
+    colnames(percentage_df) <- c('grupo', 1:(ncol(percentage_df)-1))
+    
+  }
+  
+  
+  
+  return(percentage_df)
+  
+}
+
+f_tipo_process_2018 <- function(df, percentis) {
+  
+  # Vamos substituir os missings por zero
+  df$variables[is.na(df$variables)] <- 0
+  
+  # Bloco 1: cálculo do valor despendido
+  df <- df %>%
+    group_by({{percentis}}) %>% # {{percentis}}
+    summarise(in_natura = survey_mean( pc_desp_nivel6_tipo_in_natura,  na.rm = TRUE),
+              ing_culinario = survey_mean( pc_desp_nivel6_tipo_ing_culinario,  na.rm = TRUE),
+              processado = survey_mean( pc_desp_nivel6_tipo_processado,  na.rm = TRUE),
+              ultraprocessado = survey_mean( pc_desp_nivel6_tipo_ultraprocessado,  na.rm = TRUE),
+              ) %>%
+    select(-(ends_with("_se"))) %>%
+    as.data.frame()
+  
+  # Formato final 
+  df_t <- t(df)
+  df_t <- df_t[-1,] %>% as.data.frame()
+  colnames(df_t) <- c(1:ncol(df_t))
+  
+  # Vamos então fazer a conta do percentual do gasto com cada grupo de alimento
+  col_sums <- colSums(df_t)
+  
+  # Create a new data frame for percentages
+  percentage_df <- as.data.frame(apply(df_t, 1, function(col) col / col_sums * 100))
+  percentage_df <- round(percentage_df,2)
+  
+  
+  
+  if (ncol(percentage_df) == 1) {
+    
+    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
+    colnames(percentage_df) <- c('grupo', 'Total')
+    
+  } else {
+    
+    # Aqui temos que transpor antes
+    percentage_df <- t(percentage_df)
+    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
+    colnames(percentage_df) <- c('grupo', 1:(ncol(percentage_df)-1))
+    
+  }
+  
+  
+  return(percentage_df)
+  
+}
+
+
+# ANTIGO ----  ------------------------------------------------------------
+
+# f_xtile_filter_2018 <- function(df, variavel, var_peso, nova_var, n, estrato) {
+#   
+#   x <- 1 / n
+#   
+#   df <- filter(df, estrato_pof %in% estrato)
+#   
+#   percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
+#   df[[nova_var]] <- cut(df[[variavel]], 
+#                         breaks = percentis,
+#                         labels = F, 
+#                         include.lowest = T, 
+#                         na.pass = TRUE)
+#   return(df)
+#   
+# }
+# f_medias_2018 <- function(df, percentis) {
+#   
+#   df <- df %>%
+#     group_by({{percentis}}) %>%
+#     summarise(despesa_total = survey_mean( desp_total_pc,  na.rm = TRUE),
+#               despesa_alimentos = survey_mean( desp_pc_g1,  na.rm = TRUE),
+#               despesa_habitacao = survey_mean( desp_pc_g2,  na.rm = TRUE),
+#               despesa_transporte = survey_mean( desp_pc_g4,  na.rm = TRUE),
+#               despesa_saude = survey_mean( desp_pc_g6,  na.rm = TRUE),
+#               despesa_emprestimo = survey_mean( desp_pc_g19,  na.rm = TRUE)
+#     ) %>%
+#     mutate(despesa_outras = despesa_total - (despesa_alimentos + despesa_habitacao +
+#                                                despesa_transporte + despesa_saude + 
+#                                                despesa_emprestimo) ) %>%
+#     
+#     select(-(ends_with("_se"))) %>%
+#     as.data.frame()
+#   
+#   return(df)
+#   
+# }
 
 
 # Criar funcoes para tabelas -----------------------------------------------------
