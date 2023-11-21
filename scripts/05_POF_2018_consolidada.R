@@ -203,10 +203,6 @@ despesas_gerais <- f_valor_mensal(despesas_gerais, "desp"); gc()
 var_dom <- c("UF", "ESTRATO_POF", "TIPO_SITUACAO_REG",
              "COD_UPA", "NUM_DOM", "NUM_UC")
 
-# identificação das pessoas
-var_pessoa <- c(var_dom, "COD_INFORMANTE") 
-
-
 ## 2.1. Despesas a nível de grupo ----
 desp.nivel.3.all <- 
   despesas_gerais %>%
@@ -249,8 +245,6 @@ desp.nivel.3.nao.monet <-
   rowwise() %>%
   mutate(sum_desp_nivel3_nao_monet = sum(c_across(starts_with("desp_nivel3_nao_monet_")), na.rm = TRUE)); gc()
 
-  
-
 
 # Depesas com alimentos dentro e fora do domicilio
 desp.nivel.4 <- 
@@ -278,7 +272,6 @@ desp.nivel.5.dentro.dom <-
               names_prefix = "desp_nivel5_dentro_dom_") %>%
   rowwise() %>%
   mutate(sum_desp_nivel5_dentro_dom = sum(c_across(starts_with("desp_nivel5_dentro_dom_")), na.rm = TRUE)); gc()
-
 
 
 # Fora do domicilio
@@ -320,29 +313,46 @@ desp_df <- desp.nivel.3.all %>%
 
 rm(list = c('desp.nivel.3.all', 'desp.nivel.3.monet', 'desp.nivel.3.nao.monet',
             'desp.nivel.4', 'desp.nivel.5.dentro.dom', 'desp.nivel.5.fora.dom',
-            'desp.nivel.6.tipo.proc')); gc()
+            'desp.nivel.6.tipo.proc', 'despesas_gerais')); gc()
 
 
-# 3. Construção da base de moradores --------------------------------------
+# 3. Base de moradores --------------------------------------
 
+# Base de moradores
+MORADOR <- readRDS("MORADOR.rds")
+
+# Base apenas com as pessoas responsáveis do domicílio
+resp.dom <- MORADOR %>% 
+  filter(V0306 == 1) %>% 
+  mutate(chefe_dom_over_65 = ifelse(!is.na(V0403) & V0403 >= 65, 1, 0 ),
+         chefe_dom_mulher = ifelse(!is.na(V0404) & V0404 == 2, 1, 0 ),
+         chefe_dom_negro = ifelse(!is.na(V0405) & V0405 %in% c(2, 4), 1, 0 ),
+         chefe_dom_analf = ifelse(!is.na(V0414) & V0414 == 2, 1, 0 ),
+         chefe_dom_EF = ifelse(!is.na(V0425) & V0425 %in% c(1:8) , 1, 0 ),
+         chefe_dom_EM = ifelse(!is.na(V0425) & V0425 %in% c(9:11), 1, 0 )) %>% 
+  select(var_dom, chefe_dom_over_65, 
+         chefe_dom_mulher, chefe_dom_negro, 
+         chefe_dom_analf, chefe_dom_EF, chefe_dom_EM)
+
+# Número de pessoas no domicilio
 num_pessoas <- readRDS("MORADOR.rds") %>%
   group_by(UF, ESTRATO_POF, TIPO_SITUACAO_REG,
            COD_UPA, NUM_DOM, NUM_UC) %>% 
   summarise(pessoas_dom = max(COD_INFORMANTE))
 
-# Atribuindo o número de pessoas da familia
+# Atribuindo o número de pessoas da familia e as características dos chefe de familia
 morador_df <- unique(readRDS("MORADOR.rds")[, c(var_dom, "PESO_FINAL", "RENDA_TOTAL", "PC_RENDA_DISP", "PC_RENDA_MONET", "PC_RENDA_NAO_MONET") ]) %>%
   left_join(num_pessoas, by = var_dom) %>%
+  left_join(resp.dom, by = var_dom) %>%
   mutate(peso_final_fam = pessoas_dom * PESO_FINAL); gc()
 
 # Se quisermos fazer o join das despesas gerais com a de pessoas vamos precisar da base MORADOR.rds e do id var_pessoa
-
-desp_df <- full_join(desp_df, morador_df, by = var_dom) %>% as.data.frame()
+pof_2018 <- full_join(desp_df, morador_df, by = var_dom) %>% as.data.frame()
 
 # Vamos calcular todas essas variáveis a nível per capita do domicílio
 
 # Extract variables with prefix 'desp_'
-desp_vars <- grep("^desp_", names(desp_df), value = TRUE)
+desp_vars <- grep("^desp_", names(pof_2018), value = TRUE)
 
 # Create new variables with the prefix 'pc_desp_'
 for (var in desp_vars) {
@@ -351,20 +361,139 @@ for (var in desp_vars) {
   
   cat('\n',new_var_name, match(var, desp_vars), "de", length(desp_vars),'...')
   
-  desp_df[[new_var_name]] <- desp_df[[var]] / desp_df$pessoas_dom
+  pof_2018[[new_var_name]] <- pof_2018[[var]] / pof_2018$pessoas_dom
   
 }
 
-pof_2018 <- desp_df
+rm(list = c('desp_df', 'morador_df', 'num_pessoas',
+            'resp.dom', 'MORADOR')); gc()
+
+# 4. Consumo Nutrientes ------------------------------------------------------
+
+# Informações sobre o consumo de alimentos
+CONSUMO_ALIMENTAR <- readRDS( "CONSUMO_ALIMENTAR.rds" ) %>%
+  rename(COD_INFORMANTE = COD_INFOR.MANTE, 
+         CA_PESO_FINAL = PESO_FINAL,
+         CA_PESO = PESO) %>%
+  mutate(Codigo = round(V9001/100))
+
+# Agora vamos incorporar essas informações na base de Consumo Alimentar
+CONSUMO_ALIMENTAR <- CONSUMO_ALIMENTAR %>% 
+  left_join(tradutor_desp, by = 'Codigo')
+
+consumo_nutrientes <- CONSUMO_ALIMENTAR %>% 
+  filter(!is.na(ENERGIA_KCAL)) %>%
+  group_by(across(all_of(c(var_dom))))%>%
+  summarise(consumo_kcal = sum(ENERGIA_KCAL, na.rm = TRUE),
+            consumo_kj = sum(ENERGIA_KJ, na.rm = TRUE))  
+  
+consumo.tipo.proc <-  
+  CONSUMO_ALIMENTAR %>%
+  filter(!is.na(Grupo_Processado)) %>%
+  mutate(grupo_alim_tipo_process = factor(Grupo_Processado, levels = 1:4, 
+                                   labels = c('in_natura',
+                                              'ing_culinario',
+                                              'processado',
+                                              'ultraprocessado'))
+  ) %>%
+  group_by(across(all_of(c(var_dom, 'grupo_alim_tipo_process'))))%>%
+  summarise(consumo_grupo = sum(ENERGIA_KCAL, na.rm = TRUE))  %>%
+  ungroup() %>% 
+  pivot_wider(names_from = grupo_alim_tipo_process,
+              values_from = consumo_grupo,
+              names_prefix = "consumo_nivel6_tipo_") %>%
+  rowwise() %>%
+  mutate(sum_consumo_nivel6_tipo = sum(c_across(starts_with("consumo_nivel6_tipo_")), na.rm = TRUE)); gc()
+
+
+pof_2018 <- pof_2018 %>% 
+  full_join(consumo_nutrientes, by = var_dom) %>%
+  full_join(consumo.tipo.proc, by = var_dom)
+
+consumo_vars <- grep("^consumo_", names(pof_2018), value = TRUE)
+
+# Create new variables with the prefix 'pc_consumo_'
+for (var in consumo_vars) {
+  
+  new_var_name <- paste0("pc_", var)
+  
+  cat('\n',new_var_name, match(var, consumo_vars), "de", length(consumo_vars),'...')
+  
+  pof_2018[[new_var_name]] <- pof_2018[[var]] / pof_2018$pessoas_dom
+  
+}
+
+rm(list = c('CONSUMO_ALIMENTAR', 'consumo_nutrientes', 'consumo.tipo.proc')); gc()
+
+
+# 5. Insegurança alimentar ------
+
+# base Condições de vida
+
+CONDICOES_VIDA <- readRDS( "CONDICOES_VIDA.RDS" ) 
+  
+# Definicação de segurança alimentar (SA): 
+ # A condição de Segurança Alimentar (SA) reflete o 
+ # pleno acesso dos moradores dos domicílios aos alimentos,
+ # tanto em quantidade suficiente como em qualidade adequada, 
+ # de tal modo que a pessoa entrevistada sequer relata preocupação 
+ # ou iminência de sofrer qualquer restrição alimentar no futuro próximo
+
+
+# Insegurança Alimentar Leve (IA leve)
+  # há preocupação com o acesso aos alimentos no futuro e já se 
+  # verifica comprometimento da qualidade da alimentação, ou os 
+  # adultos da família assumem estratégias para manter uma quantidade
+  # mínima de alimentos disponível aos seus integrantes
+
+# Insegurança Alimentar Moderada (IA moderada)
+  # Nos domicílios com Insegurança Alimentar Moderada (IA moderada), 
+  # os moradores, em especial os adultos, passaram a conviver com restrição
+  # quantitativa de alimentos no período de referência
+
+# Insegurança Alimentar Grave (IA grave)
+  # O nível de Insegurança Alimentar Grave (IA grave) significa que houve 
+  # ruptura nos padrões de alimentação resultante da falta de alimentos 
+  # entre todos os moradores, incluindo, quando presentes, as crianças.
+
+CONDICOES_VIDA <- CONDICOES_VIDA %>% 
+  mutate(
+    inseguranca_alimentar = case_when(
+       V6108 == 2 & V6109 == 2 & V6110 == 2 & V6111 == 2 & 
+         V6112 %in% c(NA, 2) & V6113 %in% c(NA, 2) & V6114 %in% c(NA, 2) & V6115 %in% c(NA, 2) &
+         V6116 %in% c(NA, 2) & V6117 %in% c(NA, 2) & V6118 %in% c(NA, 2) & V6119 %in% c(NA, 2) & 
+         V6120 %in% c(NA, 2) & V6121 %in% c(NA, 2) ~ 1,
+      ( V6108 == 1 | V6109 == 1 | V6110 == 1 | V6111 == 1 | V6113 == 1 |  V6116 == 1) & 
+        V6112 %in% c(NA, 2) & V6114 %in% c(NA, 2) & V6115 %in% c(NA, 2) &
+        V6116 %in% c(NA, 2) & V6117 %in% c(NA, 2) & V6118 %in% c(NA, 2) & V6119 %in% c(NA, 2) & 
+        V6120 %in% c(NA, 2) & V6121 %in% c(NA, 2) ~ 2,
+      ( V6108 == 1 | V6109 == 1 | V6110 == 1 | V6111 == 1 | V6112 == 1 | V6113 == 1 |
+        V6114 == 1 | V6116 == 1 | V6117 == 1 | V6118 == 1 | V6119 == 1) &
+        V6115 %in% c(NA, 2) & V6120 %in% c(NA, 2) & V6121 %in% c(NA, 2) ~ 3,
+      ( V6108 == 1 | V6109 == 1 | V6110 == 1 | V6111 == 1 | V6112 == 1 | V6113 == 1 |
+        V6114 == 1 | V6116 == 1 | V6117 == 1 | V6118 == 1 | V6119 == 1 |
+          
+          
+        V6115 == 1 | V6120 == 1 | V6121 == 1) ~ 4)
+  ) %>%
+  mutate(
+    inseguranca_alimentar = factor(inseguranca_alimentar, 1:4, 
+                                   labels = c('SA',
+                                              'IA_leve',
+                                              'IA_moderada',
+                                              'IA_grave'))) %>% 
+  select(var_dom, inseguranca_alimentar)
+
+
+# Tabela a nível de familia finalizada
+pof_2018 <- pof_2018 %>% 
+  full_join(CONDICOES_VIDA, by = var_dom) 
+  
+
+# 6. Tabela Final ------------------------------------------------------------
 
 git.path <- 'C:/Users/user/Projetos_GIT/escolhas-scripts-db/data'
 
 saveRDS(pof_2018, file.path(git.path, "pof_fam_wide_2018.RDS")) 
-
-
-
-
-
-
 
 

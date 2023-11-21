@@ -56,7 +56,6 @@ source(file.path( git_path, "scripts/01_criar_funcoes.R" ),encoding = 'UTF-8')
 # Base de dados consolidadas
 pof <- readRDS( file.path( git_path, "data/despesas_por_grupos_POF.RDS") )
 
-
 # Arranjos geográficos a serem definidos
 estrato_uf_com_rural        <- 4101:4135
 estrato_uf_sem_rural        <- 4101:4124

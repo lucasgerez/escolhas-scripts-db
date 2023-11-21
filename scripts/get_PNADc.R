@@ -30,16 +30,16 @@ visita <- 1:5
 periodo <- expand.grid(anos, visita)
 names(periodo) <- c('ano', 'visita')
 
-lst.pnadc <- list()
-
+# # Vamos tentar pegar o visita 5
+# periodo <- periodo %>% filter(visita == 5, anos > 2015)
 
 for (p in 1:nrow(periodo)) {
   
   t0 <- Sys.time()
   
-  cat('Tentativa de obter a base anual da PNAD contínua\nANO', 
+  cat('\nTentativa de obter a base anual da PNAD contínua\n  ANO', 
       periodo[p,]$ano,  
-      "\nVISITA:", periodo[p,]$visita,
+      "\n  VISITA:", periodo[p,]$visita,
       '\n\n')
   
   
@@ -49,39 +49,50 @@ for (p in 1:nrow(periodo)) {
   
   pnad_file <- pnad_lst$variables 
   
+  # save(pnad_file, 
+  #      file = paste0('F:/Drive/BASES DE DADOS BRUTOS/PNAD_CONTÍNUA_IBGE/Anual/Raw_data_R/',
+  #                    'pnad_anual_', periodo[p,]$ano, '_visita' ,periodo[p,]$visita, '.rdata'), 
+  #      version = 2, compress = T)
   
-  save(pnad_file, 
-       file = paste0('F:/Drive/BASES DE DADOS BRUTOS/PNAD_CONTÍNUA_IBGE/Anual/Raw_data_R/',
-                     'pnad_anual_', periodo[p,]$ano, '_visita' ,periodo[p,]$visita, '.rdata'), 
-       version = 2, compress = T)
+  pnad.path <- 'F:/Drive/BASES DE DADOS BRUTOS/PNAD_CONTÍNUA_IBGE/Anual/Raw_data_R'
   
+  # salvando o arquivo de cada entrevista anual
+  saveRDS(pnad_file,
+          file.path(pnad.path, 
+                    paste0('pnad_anual_', 
+                           periodo[p,]$ano, '_visita',
+                           periodo[p,]$visita,
+                           ".RDS"))) 
+  
+  rm(list = c('pnad_lst', 'pnad_file'));gc()
   
   t1 <- Sys.time() 
   
-  
+  cat(paste(t1 - t0))
   
   
 }
 
-
-
-# PNAD Continua trimestral ---------
-
-
-
-# Teste com um trimestre
-
-
-
-survey_design_df <- svydesign(
-  
-  id = ~UPA,
-  strata = ~Estrato,
-  weights = ~V1027,
-  data = pnad_file$variables
-  
-)
-
+# 
+# 
+# 
+# # PNAD Continua trimestral ---------
+# 
+# 
+# 
+# # Teste com um trimestre
+# 
+# 
+# 
+# survey_design_df <- svydesign(
+#   
+#   id = ~UPA,
+#   strata = ~Estrato,
+#   weights = ~V1027,
+#   data = pnad_file$variables
+#   
+# )
+# 
 
 
 
