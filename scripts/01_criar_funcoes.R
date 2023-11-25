@@ -13,14 +13,16 @@
 # # Caminho para exportar as tabelas
 # export <- 'C:/Users/ricar/Documents/consultoria/gerez/resultados'
 
-# pacotes
-library(dplyr)
-library(tidyr)
-library(Hmisc) # para mexer com os dados amostrais
-library(openxlsx)
-library(survey)
-library(srvyr)
 
+# Pacotes
+load.lib <- c( "tidyr", "dplyr", "openxlsx", "survey", "srvyr" )
+
+# Carregando os pacotes e instalando o que ainda não temos
+install.lib <- load.lib[ !load.lib %in% installed.packages() ]
+
+for( lib in install.lib ) install.packages( lib, dependencies = TRUE )
+sapply( load.lib, require, character = TRUE )
+rm(list = c("install.lib", "lib", "load.lib"))
 
 
 # Funcoes POF 2002 e 2008 -------------------------------------------------
