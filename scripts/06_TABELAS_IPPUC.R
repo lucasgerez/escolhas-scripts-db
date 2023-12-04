@@ -1,0 +1,297 @@
+# ------------------------------------------------------------------- #
+#                     POF: SISTEMATIZAÇÃO DOS DADOS 
+# ------------------------------------------------------------------- #
+
+# Projeto: Instituto Escolhas
+# Autor: Lucas Gerez Foratto
+
+# Para mais informações do que é a POF:
+# https://www.ibge.gov.br/estatisticas/sociais/trabalho/9050-pesquisa-de-orcamentos-familiares.html?=&t=o-que-e
+
+# exemplo de tratamento da base
+# https://rpubs.com/amrofi/microdados_pof
+
+# Importante: A pesquisa tem como unidade de investigação o domicílio e é realizada por amostragem
+
+# O desenho atual da amostra da POF foi estruturado de tal modo que propicia a publicação de resultados
+# nos seguintes níveis: Brasil, Grandes Regiões, e também por situações urbana e rural.
+
+# Uma vez rodado o script get_pof.R, temos os microdados brutos e RDS
+
+# Arquivos de documentação
+# F:\Drive\BASES DE DADOS BRUTOS\POF\Microdados\Documentacao_20221226
+
+# Para mais informações sobre o dicionário das variáveis: 
+# Dicionários de váriaveis.xlsx
+
+# Para mais informações sobre os estratos: 
+# Estratos POF 2017-2018.xlsx
+# Para mais informações sobre os estratos: 
+# Estratos POF 2017-2018.xlsx
+# ESTRATO_POF	Identifica os estratos do plano amostral da pesquisa: 
+# estratificações Geográfica e Estatística. No nível geográfico, a estratificação compreende: 
+# área urbana para o município da capital, resto da região metropolitana, resto da UF e área rural. 
+# A estratificação estatística foi realizada a partir das definições implementadas na Amostra Mestra, 
+# que utiliza informações da variável renda total do domicílio, obtida a partir dos dados do Censo 2010.  
+
+
+# Nota sobre os pesos: 
+# PESO: UPA a nível de domicilio
+# PESO_FINAL: já com os estratos
+
+
+# Para a tabela de renda per capita vamos utilizar a variável de renda monetária
+
+t0 <- Sys.time()
+
+# Caminho git
+git_path <- 'C:/Users/user/Projetos_GIT/escolhas-scripts-db'
+
+# Vamos rodar as funções no Git
+source(file.path( git_path, "scripts/01_criar_funcoes.R" ), encoding = 'UTF-8')
+
+# Base de dados consolidadas
+pof_2018 <- readRDS( file.path( git_path, "data/pof_fam_wide_2018.RDS") )
+
+# Arranjos geográficos a serem definidos
+estrato_uf_com_rural        <- 4101:4135
+estrato_uf_sem_rural        <- 4101:4124
+estrato_uf_sem_rm_sem_rural <- 4108:4124
+estrato_rm                  <- 4101:4108
+estrato_rm_sem_capital      <- 4106:4108
+estrato_capital             <- 4101:4105
+
+# Todos os estratos que faremos
+dimensoes <- c('estrato_uf_com_rural', 'estrato_uf_sem_rural',
+               'estrato_uf_sem_rm_sem_rural', 'estrato_rm',
+               'estrato_rm_sem_capital', 'estrato_capital')
+
+# Vamos fazer as listas: 
+lst.tab         <- list()
+lst.perc        <- list()
+lst.fora.dom    <- list()
+lst.proc        <- list()
+lst.kcal        <- list()
+lst.reais.kcal  <- list()
+lst.inseguranca <- list()
+
+for (d in dimensoes) {
+  
+  cat('\n  Dimensão', d, paste(Sys.time()))
+  
+  # Tabelas 
+  
+  # Caso tenha apenas uma observação, vamos duplicá-la para não perder
+  
+  # Incluindo a informação de decil e já filtrando para o estrato desejado
+  pof_estrato <- f_xtile_filter_2002_2008(pof_2018, 
+                                          variavel = "PC_RENDA_DISP",
+                                          var_peso = "peso_final_fam",
+                                          nova_var = "decis", 
+                                          n = 10, 
+                                          estrato = get(d), 
+                                          estrato_var_name = ESTRATO_POF )  %>% # 
+    filter(!is.na(decis))
+  
+  aux <- pof_estrato %>% 
+    group_by(ESTRATO_POF) %>% 
+    summarise(n = n()) %>% 
+    filter(n > 1 )
+  
+  pof_estrato <- pof_estrato %>% filter(ESTRATO_POF %in% aux$ESTRATO_POF )
+  
+  # Definindo o data.frame como objeto amostral
+  # Transformando o arquivo em survey  
+  pof_svy <- as_survey(svydesign(ids = ~COD_UPA, 
+                                 strata = ~ESTRATO_POF,
+                                 weights = ~peso_final_fam, 
+                                 data = pof_estrato, 
+                                 check.strata = TRUE))
+  
+  
+  # Renda domiciliar per capita disponível
+  tab_renda <- f_inc_dist_filter_2002_2008(pof_svy = pof_svy, 
+                                           variavel = "PC_RENDA_DISP", 
+                                           var_peso = "peso_final_fam",
+                                           nova_var = "decis", 
+                                           n = 10, 
+                                           estrato = get(d),
+                                           estrato_var_name = ESTRATO_POF ) # get(d)
+  
+  pof_svy$variables$um <- 999 # para o total
+  
+  cat('\n     Tabela 1 - grandes grupos', paste(Sys.time()))
+  
+  # Bloco de gastos por grandes grupos
+  t1 <- f_medias_2018(pof_svy, decis)
+  t1b <- f_medias_2018(pof_svy, um)
+  names(t1b)[1] <- "decis"
+  t1b$decis <- 'Total'
+  t1 <- rbind(t1, t1b) 
+  t1 <- left_join(tab_renda, t1, by = 'decis') 
+  
+  # Tabela 1
+  lst.tab[[match(d, dimensoes)]] <- t1 
+  
+  
+  cat('\n     Tabela 2 - % gasto em alimentos', paste(Sys.time()))
+  
+  # Percentual gasto em tipos de alimentos
+  t2  <- f_alimentos_no_dom_2018(pof_svy, decis)
+  t2b <- f_alimentos_no_dom_2018(pof_svy, um) #  %>% t()
+  t2  <- left_join(t2, t2b, by = 'grupo' )
+  
+  # Tabela 2
+  lst.perc[[match(d, dimensoes)]] <- t2 
+  
+  
+  cat('\n     Tabela 3 - % gasto em alimentos fora do dom', paste(Sys.time()))
+  
+  # Percentual gasto em tipos de alimentos fora do dom
+  t3  <- f_alimentos_fora_dom_2018(pof_svy, decis)
+  t3b <- f_alimentos_fora_dom_2018(pof_svy, um) 
+  t3  <- left_join(t3, t3b, by = 'grupo' )
+  
+  # Tabela 3
+  lst.fora.dom[[match(d, dimensoes)]] <- t3 
+  
+  
+  cat('\n     Tabela 4 - % gasto por tipo de processamento', paste(Sys.time()))
+  
+  # Percentual gasto por tipo de processamento
+  t4 <- f_tipo_process_2018(pof_svy, decis)
+  t4b <- f_tipo_process_2018(pof_svy, um) 
+  t4  <- left_join(t4, t4b, by = 'grupo' )
+  
+  # Tabela 4
+  lst.proc[[match(d, dimensoes)]] <- t4 
+  
+  
+  cat('\n     Tabela 5 - Kcal consumido', paste(Sys.time()))
+  
+  # Kcal consumido
+  t5 <- f_consumo_kcal_2018(pof_svy, decis)
+  t5b <- f_consumo_kcal_2018(pof_svy, um) 
+  t5  <- left_join(t5, t5b, by = 'grupo' )
+  
+  # Tabela 5
+  lst.kcal[[match(d, dimensoes)]] <- t5 
+  
+  t6 <- round(t4[-1]/t5[-1],2)
+  t6 <- cbind(t4[,1], t6)
+  
+  
+  cat('\n     Tabela 6 - R$/Kcal consumido', paste(Sys.time()))
+  
+  # Tabela 6: R$/Kcal consumido
+  lst.reais.kcal[[match(d, dimensoes)]] <- t6 
+  
+  
+  # Tabela 7: Insegurança alimentar e intersecções
+  lst.inseguranca[[match(d, dimensoes)]] <- f_inseguranca_2018(pof_svy)
+  
+  
+}
+
+# nomes para facilitar
+names(lst.tab)         <- dimensoes
+names(lst.perc)        <- dimensoes
+names(lst.fora.dom)    <- dimensoes
+names(lst.proc)        <- dimensoes
+names(lst.kcal)        <- dimensoes
+names(lst.reais.kcal)  <- dimensoes
+names(lst.inseguranca) <- dimensoes
+
+leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
+                       nivel_geografico = c('UF incluindo rural',
+                                            'UF SEM incluir rural',
+                                            'Regiões da UF fora da RM SEM incluir rural',
+                                            'Região Metropolitana (RM)',
+                                            'RM exceto capital (Curitiba)',
+                                            'Capital (Curitiba)'))
+
+lst.tab$estrato_uf_com_rural
+lst.perc$estrato_uf_com_rural
+lst.fora.dom$estrato_uf_com_rural
+lst.proc$estrato_uf_com_rural
+lst.kcal$estrato_uf_com_rural
+lst.reais.kcal$estrato_uf_com_rural
+
+
+sheets <- list("leia_me" = leia.me,
+               
+               # Bloco 1: Despesas nos grandes grupos
+               "desp_grupo_01_2018" = lst.tab$estrato_uf_com_rural, 
+               "desp_grupo_02_2018" = lst.tab$estrato_uf_sem_rural,
+               "desp_grupo_03_2018" = lst.tab$estrato_uf_sem_rm_sem_rural,
+               "desp_grupo_04_2018" = lst.tab$estrato_rm,
+               "desp_grupo_05_2018" = lst.tab$estrato_rm_sem_capital,
+               "desp_grupo_06_2018" = lst.tab$estrato_capital,
+               
+               # Bloco 2: share por tipo de alimento
+               "desp_alim_dom_01_2018" = as.data.frame(lst.perc$estrato_uf_com_rural), 
+               "desp_alim_dom_02_2018" = lst.perc$estrato_uf_sem_rural,
+               "desp_alim_dom_03_2018" = lst.perc$estrato_uf_sem_rm_sem_rural,
+               "desp_alim_dom_04_2018" = lst.perc$estrato_rm,
+               "desp_alim_dom_05_2018" = lst.perc$estrato_rm_sem_capital,
+               "desp_alim_dom_06_2018" = lst.perc$estrato_capital,
+               
+               # Bloco 3: share por tipo de alimento FORA do domicilio
+               "desp_alim_fora_dom_01_2018" = lst.fora.dom$estrato_uf_com_rural, 
+               "desp_alim_fora_dom_02_2018" = lst.fora.dom$estrato_uf_sem_rural,
+               "desp_alim_fora_dom_03_2018" = lst.fora.dom$estrato_uf_sem_rm_sem_rural,
+               "desp_alim_fora_dom_04_2018" = lst.fora.dom$estrato_rm,
+               "desp_alim_fora_dom_05_2018" = lst.fora.dom$estrato_rm_sem_capital,
+               "desp_alim_fora_dom_06_2018" = lst.fora.dom$estrato_capital,
+               
+               # Bloco 4: share por tipo de processamento
+               "desp_alim_tipo_proc_01_2018" = lst.proc$estrato_uf_com_rural, 
+               "desp_alim_tipo_proc_02_2018" = lst.proc$estrato_uf_sem_rural,
+               "desp_alim_tipo_proc_03_2018" = lst.proc$estrato_uf_sem_rm_sem_rural,
+               "desp_alim_tipo_proc_04_2018" = lst.proc$estrato_rm,
+               "desp_alim_tipo_proc_05_2018" = lst.proc$estrato_rm_sem_capital,
+               "desp_alim_tipo_proc_06_2018" = lst.proc$estrato_capital,
+               
+               
+               # Bloco 5: share por tipo de processamento
+               "consumo_perc_kcal_01_2018" = lst.kcal$estrato_uf_com_rural, 
+               "consumo_perc_kcal_02_2018" = lst.kcal$estrato_uf_sem_rural,
+               "consumo_perc_kcal_03_2018" = lst.kcal$estrato_uf_sem_rm_sem_rural,
+               "consumo_perc_kcal_04_2018" = lst.kcal$estrato_rm,
+               "consumo_perc_kcal_05_2018" = lst.kcal$estrato_rm_sem_capital,
+               "consumo_perc_kcal_06_2018" = lst.kcal$estrato_capital,
+               
+               
+               # Bloco 6: share por tipo de processamento
+               "reais_por_kcal_01_2018" = lst.reais.kcal$estrato_uf_com_rural, 
+               "reais_por_kcal_02_2018" = lst.reais.kcal$estrato_uf_sem_rural,
+               "reais_por_kcal_03_2018" = lst.reais.kcal$estrato_uf_sem_rm_sem_rural,
+               "reais_por_kcal_04_2018" = lst.reais.kcal$estrato_rm,
+               "reais_por_kcal_05_2018" = lst.reais.kcal$estrato_rm_sem_capital,
+               "reais_por_kcal_06_2018" = lst.reais.kcal$estrato_capital,
+               
+               
+               # Bloco 7: insegurança alimentar
+               "inseg_alim_01_2018" = lst.inseguranca$estrato_uf_com_rural, 
+               "inseg_alim_02_2018" = lst.inseguranca$estrato_uf_sem_rural,
+               "inseg_alim_03_2018" = lst.inseguranca$estrato_uf_sem_rm_sem_rural,
+               "inseg_alim_04_2018" = lst.inseguranca$estrato_rm,
+               "inseg_alim_05_2018" = lst.inseguranca$estrato_rm_sem_capital,
+               "inseg_alim_06_2018" = lst.inseguranca$estrato_capital
+               
+               )
+
+
+
+
+library(openxlsx)
+
+# Tabela Final
+write.xlsx(sheets, "F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Resultados/POF/pof_tabelas_2018.xlsx")
+
+
+t1 <- Sys.time()
+
+
+t1 - t0 
+
