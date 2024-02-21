@@ -15,7 +15,7 @@
 
 
 # Pacotes
-load.lib <- c( "tidyr", "dplyr", "openxlsx", "survey", "srvyr" )
+load.lib <- c( "tidyr", "dplyr", "openxlsx", "survey", "srvyr", 'Hmisc' )
 
 # Carregando os pacotes e instalando o que ainda não temos
 install.lib <- load.lib[ !load.lib %in% installed.packages() ]
@@ -29,7 +29,7 @@ rm(list = c("install.lib", "lib", "load.lib"))
 
 
 # Função para a POF de 2002 a 2008
-f_xtile_filter_2002_2008 <- function(df, variavel, var_peso, nova_var, n, estrato, estrato_var_name = 'estrato_pof') {
+f_xtile_filter_2018 <- function(df, variavel, var_peso, nova_var, n, estrato, estrato_var_name = 'estrato_pof') {
   
   x <- 1 / n
   
@@ -47,8 +47,8 @@ f_xtile_filter_2002_2008 <- function(df, variavel, var_peso, nova_var, n, estrat
 
 
 # Calculo da renda pc 
-f_inc_dist_filter_2002_2008 <- function(pof_svy, variavel, var_peso, nova_var, n, estrato, 
-                                        estrato_var_name = 'estrato_pof') {
+f_inc_dist_filter_2018 <- function(pof_svy, variavel, var_peso, nova_var, n, estrato, 
+                                   estrato_var_name = 'estrato_pof') {
   
   options(warn = -1)
   
@@ -63,6 +63,7 @@ f_inc_dist_filter_2002_2008 <- function(pof_svy, variavel, var_peso, nova_var, n
   x <- 1 / n
   
   df <- filter(df, {{estrato_var_name}} %in% estrato)
+  
   
   percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
   
@@ -105,7 +106,7 @@ f_medias_2018 <- function(df, percentis) {
   # Vamos substituir os missings por zero
   df$variables[is.na(df$variables)] <- 0
   
-  df <- df %>%
+  df <- df$variables %>%
     group_by({{percentis}}) %>%
     summarise(despesa_total = survey_mean( sum_desp_nivel3/pessoas_dom,  na.rm = TRUE),
               despesa_alimentos = survey_mean( pc_desp_nivel3_Alimentacao,  na.rm = TRUE),
@@ -408,23 +409,28 @@ f_inseguranca_2018 <- function(df) {
 }
 
 
+
 # ANTIGO ----  ------------------------------------------------------------
 
 # f_xtile_filter_2018 <- function(df, variavel, var_peso, nova_var, n, estrato) {
-#   
-#   x <- 1 / n
-#   
-#   df <- filter(df, estrato_pof %in% estrato)
-#   
-#   percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
-#   df[[nova_var]] <- cut(df[[variavel]], 
-#                         breaks = percentis,
-#                         labels = F, 
-#                         include.lowest = T, 
-#                         na.pass = TRUE)
-#   return(df)
-#   
+  
+  require(Hmisc)
+  
+  x <- 1 / n
+  
+  df <- filter(df, ESTRATO_POF %in% estrato)
+  
+  percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
+  df[[nova_var]] <- cut(df[[variavel]],
+                        breaks = percentis,
+                        labels = F,
+                        include.lowest = T,
+                        na.pass = TRUE)
+  return(df)
+  
 # }
+
+
 # f_medias_2018 <- function(df, percentis) {
 #   
 #   df <- df %>%
