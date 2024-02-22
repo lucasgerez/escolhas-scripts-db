@@ -172,7 +172,7 @@ for (y in anos) {
 names(lst.years) <- c("y_2002", "y_2008")
 
 
-# Feito isso vamos explortar as tabelas
+# Feito isso vamos exportar as tabelas
 
 leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
                        nivel_geografico = c('UF incluindo rural',

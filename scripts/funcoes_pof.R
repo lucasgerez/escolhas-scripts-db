@@ -512,14 +512,23 @@ f_medias_2002_2008 <- function(df, percentis) {
     summarise(despesa_total = survey_mean( despesas_mensais_totais_per_capita,  na.rm = TRUE),
               despesa_alimentos = survey_mean( despesas_mensais_alimentacao_per_capita,  na.rm = TRUE),
               despesa_habitacao = survey_mean( despesas_mensais_moradia_per_capita,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( despesas_mensais_vestuario_per_capita,  na.rm = TRUE),
               despesa_transporte = survey_mean( despesas_mensais_transporte_per_capita,  na.rm = TRUE),
-              despesa_saude = survey_mean( despesas_mensais_saude_per_capita,  na.rm = TRUE)
+              despesa_higiene = survey_mean( despesas_mensais_higiene_per_capita,  na.rm = TRUE),
+              despesa_saude = survey_mean( despesas_mensais_saude_per_capita,  na.rm = TRUE),
+              despesa_educacao = survey_mean( despesas_mensais_educacao_per_capita,  na.rm = TRUE),
+              despesa_cultura = survey_mean( despesas_mensais_lazer_per_capita,  na.rm = TRUE),
+              despesa_fumo = survey_mean( despesas_mensais_fumo_per_capita,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( despesas_mensais_servicos_pessoais_per_capita,  na.rm = TRUE),
+              despesa_diversas = survey_mean( despesas_mensais_despesas_diversas_per_capita,  na.rm = TRUE)
+              
               
     ) %>%
-    mutate(despesa_outras = despesa_total - (despesa_alimentos + despesa_habitacao +
-                                               despesa_transporte + despesa_saude ) ) %>%
-    
-    select(-(ends_with("_se"))) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+             despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+             despesa_serv_pessoais + despesa_diversas) %>%
+    select({{percentis}}, despesa_total, despesa_consumo, despesa_alimentos, despesa_habitacao, despesa_vestuario, despesa_transporte, despesa_saude ) %>%
+    # select(-(ends_with("_se"))) %>%
     as.data.frame()
   
   return(df)
