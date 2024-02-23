@@ -87,6 +87,21 @@ f_medias_2018 <- function(df, percentis) {
   # Vamos substituir os missings por zero
   df$variables[is.na(df$variables)] <- 0
   
+  pof_2018$pc_desp_nivel3_Alimentacao
+  pof_2018$pc_desp_nivel3_Habitacao
+  pof_2018$pc_desp_nivel3_Vestuario
+  pof_2018$pc_desp_nivel3_Transporte
+  pof_2018$pc_desp_nivel3_Higiene
+  pof_2018$pc_desp_nivel3_Saude
+  pof_2018$pc_desp_nivel3_Educacao
+  pof_2018$pc_desp_nivel3_Lazer_e_cult
+  pof_2018$pc_desp_nivel3_Fumo
+  pof_2018$pc_desp_nivel3_Serv_pessoais
+  pof_2018$pc_desp_nivel3_diversos
+  pof_2018$sum_desp_nivel3
+  
+  
+  
   df <- df$variables %>%
     group_by({{percentis}}) %>%
     summarise(despesa_total = survey_mean( sum_desp_nivel3/pessoas_dom,  na.rm = TRUE),
