@@ -382,6 +382,13 @@ sheets <- list("leia_me" = leia.me,
 )
 
 
+# Tabela a parte: share a alimentação no orçamento e share da alimentação no domicílio (Brasil + regiões)
+
+# tem um problema que a variável da renda ainda está em texto
+
+# Só precisamos fazer a nível Brasil
+
+
 # Tabela Final
 write.xlsx(sheets, file = file.path(result_path, "pof_tabelas_2018.xlsx"))
 

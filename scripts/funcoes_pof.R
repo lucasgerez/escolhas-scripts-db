@@ -451,6 +451,8 @@ pof_res <- pof %>% select(ano, uf, estrato_pof,
                           peso_fam, COD_UPA,
                           despesas_mensais_totais_per_capita, 
                           despesas_mensais_alimentacao_per_capita,
+                          despesas_mensais_takein_food_per_capita,
+                          despesas_mensais_takeout_food_per_capita,
                           despesas_mensais_moradia_per_capita,
                           despesas_mensais_vestuario_per_capita,
                           despesas_mensais_transporte_per_capita, 
@@ -519,6 +521,8 @@ f_medias_2002_2008 <- function(df, percentis) {
     group_by({{percentis}}) %>%
     summarise(despesa_total = survey_mean( despesas_mensais_totais_per_capita,  na.rm = TRUE),
               despesa_alimentos = survey_mean( despesas_mensais_alimentacao_per_capita,  na.rm = TRUE),
+              despesa_alimentos_no_dom = survey_mean( despesas_mensais_takein_food_per_capita,  na.rm = TRUE),
+              despesa_alimentos_fora_dom = survey_mean( despesas_mensais_takeout_food_per_capita,  na.rm = TRUE),
               despesa_habitacao = survey_mean( despesas_mensais_moradia_per_capita,  na.rm = TRUE),
               despesa_vestuario = survey_mean( despesas_mensais_vestuario_per_capita,  na.rm = TRUE),
               despesa_transporte = survey_mean( despesas_mensais_transporte_per_capita,  na.rm = TRUE),
@@ -535,7 +539,7 @@ f_medias_2002_2008 <- function(df, percentis) {
     mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
              despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
              despesa_serv_pessoais + despesa_diversas) %>%
-    select({{percentis}}, despesa_total, despesa_consumo, despesa_alimentos, despesa_habitacao, despesa_vestuario, despesa_transporte, despesa_saude ) %>%
+    select({{percentis}}, despesa_total, despesa_consumo, despesa_alimentos, despesa_alimentos_no_dom, despesa_alimentos_fora_dom, despesa_habitacao, despesa_vestuario, despesa_transporte, despesa_saude ) %>%
     as.data.frame()
   
   return(df)
