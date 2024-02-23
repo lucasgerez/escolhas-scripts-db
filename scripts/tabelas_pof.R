@@ -160,7 +160,7 @@ write.xlsx(sheets, file = file.path(result_path, "pof_tabelas_grandes_grupos_200
 
 
 
-## Tabelas de 2018 ----
+## POF 2018 ----
 
 # Base de dados consolidadas
 pof_2018 <- readRDS( file.path( git_path, "data/pof_fam_wide_2018.RDS") )

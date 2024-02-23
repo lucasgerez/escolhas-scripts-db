@@ -87,37 +87,30 @@ f_medias_2018 <- function(df, percentis) {
   # Vamos substituir os missings por zero
   df$variables[is.na(df$variables)] <- 0
   
-  pof_2018$pc_desp_nivel3_Alimentacao
-  pof_2018$pc_desp_nivel3_Habitacao
-  pof_2018$pc_desp_nivel3_Vestuario
-  pof_2018$pc_desp_nivel3_Transporte
-  pof_2018$pc_desp_nivel3_Higiene
-  pof_2018$pc_desp_nivel3_Saude
-  pof_2018$pc_desp_nivel3_Educacao
-  pof_2018$pc_desp_nivel3_Lazer_e_cult
-  pof_2018$pc_desp_nivel3_Fumo
-  pof_2018$pc_desp_nivel3_Serv_pessoais
-  pof_2018$pc_desp_nivel3_diversos
-  pof_2018$sum_desp_nivel3
   
-  
-  
-  df <- df$variables %>%
-    group_by({{percentis}}) %>%
+  df <- df %>%
+    group_by({{percentis}}) %>% # 
     summarise(despesa_total = survey_mean( sum_desp_nivel3/pessoas_dom,  na.rm = TRUE),
               despesa_alimentos = survey_mean( pc_desp_nivel3_Alimentacao,  na.rm = TRUE),
               despesa_alimentos_no_dom = survey_mean( pc_desp_nivel4_Alimentacao_no_dom,  na.rm = TRUE),
               despesa_alimentos_fora_dom = survey_mean( pc_desp_nivel4_Alimentacao_fora_dom,  na.rm = TRUE),
               despesa_habitacao = survey_mean( pc_desp_nivel3_Habitacao,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( pc_desp_nivel3_Vestuario,  na.rm = TRUE),
               despesa_transporte = survey_mean( pc_desp_nivel3_Transporte,  na.rm = TRUE),
+              despesa_higiene = survey_mean( pc_desp_nivel3_Higiene,  na.rm = TRUE),
               despesa_saude = survey_mean( pc_desp_nivel3_Saude,  na.rm = TRUE),
-              despesa_emprestimo = survey_mean( pc_desp_nivel3_emprestimo,  na.rm = TRUE)
+              despesa_educacao = survey_mean( pc_desp_nivel3_Educacao,  na.rm = TRUE),
+              despesa_cultura = survey_mean( pc_desp_nivel3_Lazer_e_cult,  na.rm = TRUE),
+              despesa_fumo = survey_mean( pc_desp_nivel3_Fumo,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( pc_desp_nivel3_Serv_pessoais,  na.rm = TRUE),
+              despesa_diversas = survey_mean( pc_desp_nivel3_diversos,  na.rm = TRUE)
     ) %>%
-    mutate(despesa_outras = despesa_total - (despesa_alimentos + despesa_habitacao +
-                                               despesa_transporte + despesa_saude + 
-                                               despesa_emprestimo) ) %>%
-    
-    select(-(ends_with("_se"))) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+             despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+             despesa_serv_pessoais + despesa_diversas) %>%
+    select({{percentis}}, despesa_total, despesa_consumo, despesa_alimentos,
+           despesa_alimentos_no_dom, despesa_alimentos_fora_dom,
+           despesa_habitacao, despesa_vestuario, despesa_transporte, despesa_saude ) %>%
     as.data.frame()
   
   return(df)
@@ -543,7 +536,6 @@ f_medias_2002_2008 <- function(df, percentis) {
              despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
              despesa_serv_pessoais + despesa_diversas) %>%
     select({{percentis}}, despesa_total, despesa_consumo, despesa_alimentos, despesa_habitacao, despesa_vestuario, despesa_transporte, despesa_saude ) %>%
-    # select(-(ends_with("_se"))) %>%
     as.data.frame()
   
   return(df)
