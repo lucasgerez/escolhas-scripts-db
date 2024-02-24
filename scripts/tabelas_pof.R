@@ -47,6 +47,9 @@ dimensoes <- c('estrato_uf_com_rural', 'estrato_uf_sem_rural',
 anos <- c(2002,2008)
 
 lst.years <- list()
+lst.food.expend <- list()
+
+expand.grid(anos, dimensoes)
 
 for (y in anos) {
   
@@ -89,37 +92,37 @@ for (y in anos) {
     
     # Calculo do percentual gasto com alimento sem ser por decis
     
-    f_gasto_alimentacao_estrato(df = pof_svy, estrato = get(d))
+    aux2 <- f_gasto_alimentacao_estrato_2002_2008(df = pof_svy, estrato = get(d), region_name = d, year = y)
     
-    
+    lst.food.expend[[paste0(aux2$unidade_analise,"_", aux2$pof_year)]] <- aux2
     
     
     # Renda domiciliar per capita disponível
-    tab_renda <- f_inc_dist_filter_2002_2008(pof_svy = pof_svy, 
-                                             variavel = "renda_per_capita", 
+    tab_renda <- f_inc_dist_filter_2002_2008(pof_svy = pof_svy,
+                                             variavel = "renda_per_capita",
                                              var_peso = "peso_fam",
-                                             nova_var = "decis", 
-                                             n = 10, 
+                                             nova_var = "decis",
+                                             n = 10,
                                              estrato = get(d) ) # get(d)
-    
+
     t1 <- f_medias_2002_2008(pof_svy, decis)
     pof_svy$variables$um <- 999 # para o total
     t1b <- f_medias_2002_2008(pof_svy, um)
     names(t1b)[1] <- "decis"
     t1b$decis <- 'Total'
-    t1 <- rbind(t1, t1b) 
+    t1 <- rbind(t1, t1b)
 
     # Juntando tabela 1, 2 e 3
-    lst.tab[[match(d, dimensoes)]] <- 
-      tab_renda %>% 
-      left_join(t1, by = 'decis') 
+    lst.tab[[match(d, dimensoes)]] <-
+      tab_renda %>%
+      left_join(t1, by = 'decis')
     
     
   }
   
   # nomes para facilitar
   names(lst.tab) <- dimensoes
-  
+
   leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
                          nivel_geografico = c('UF incluindo rural',
                                               'UF SEM incluir rural',
@@ -127,12 +130,14 @@ for (y in anos) {
                                               'Região Metropolitana (RM)',
                                               'RM exceto capital (Curitiba)',
                                               'Capital (Curitiba)'))
-  
+
   lst.years[[match(y, anos)]] <- lst.tab
   
 }
 
 names(lst.years) <- c("y_2002", "y_2008")
+
+bind_rows(lst.food.expend)
 
 
 # Feito isso vamos exportar as tabelas

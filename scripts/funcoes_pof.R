@@ -468,6 +468,80 @@ rm(pof)
 
 
 ## Functions for 2002 and 2008 ----
+
+f_gasto_alimentacao_estrato_2002_2008 <- function(df, estrato, region_name, year) {
+  
+  df <- filter(df, estrato_pof %in% estrato)
+  
+  df_tab <- df %>%
+    summarise(renda_dom_pc_disp = survey_mean( renda_per_capita,  na.rm = TRUE),
+              despesa_alimentos = survey_mean( despesas_mensais_alimentacao_per_capita,  na.rm = TRUE),
+              despesa_alimentos_no_dom = survey_mean( despesas_mensais_takein_food_per_capita,  na.rm = TRUE),
+              despesa_alimentos_fora_dom = survey_mean( despesas_mensais_takeout_food_per_capita,  na.rm = TRUE),
+              despesa_habitacao = survey_mean( despesas_mensais_moradia_per_capita,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( despesas_mensais_vestuario_per_capita,  na.rm = TRUE),
+              despesa_transporte = survey_mean( despesas_mensais_transporte_per_capita,  na.rm = TRUE),
+              despesa_higiene = survey_mean( despesas_mensais_higiene_per_capita,  na.rm = TRUE),
+              despesa_saude = survey_mean( despesas_mensais_saude_per_capita,  na.rm = TRUE),
+              despesa_educacao = survey_mean( despesas_mensais_educacao_per_capita,  na.rm = TRUE),
+              despesa_cultura = survey_mean( despesas_mensais_lazer_per_capita,  na.rm = TRUE),
+              despesa_fumo = survey_mean( despesas_mensais_fumo_per_capita,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( despesas_mensais_servicos_pessoais_per_capita,  na.rm = TRUE),
+              despesa_diversas = survey_mean( despesas_mensais_despesas_diversas_per_capita,  na.rm = TRUE)
+    ) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+           despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+           despesa_serv_pessoais + despesa_diversas) %>%
+    mutate(perc_aliment_orcamento = round(100*despesa_alimentos/despesa_consumo),
+           perc_aliment_no_domicilio = round(100*despesa_alimentos_no_dom/despesa_alimentos)) %>%
+    mutate(unidade_analise = region_name, pof_year = year) %>%
+    select(unidade_analise, pof_year, perc_aliment_orcamento, perc_aliment_no_domicilio) %>%
+    
+    as.data.frame()
+  
+  return(df_tab)
+  
+  
+  
+}
+
+# EM CONSTRUÇÃO ......
+# mesma coisa do estrato, mas aqui para o Brasil
+f_gasto_alimentacao_br_2002_2008 <- function(df, estrato) {
+  
+  df <- filter(df, estrato_pof %in% estrato)
+  
+  df_tab <- df %>%
+    summarise(renda_dom_pc_disp = survey_mean( renda_per_capita,  na.rm = TRUE),
+              despesa_alimentos = survey_mean( despesas_mensais_alimentacao_per_capita,  na.rm = TRUE),
+              despesa_alimentos_no_dom = survey_mean( despesas_mensais_takein_food_per_capita,  na.rm = TRUE),
+              despesa_alimentos_fora_dom = survey_mean( despesas_mensais_takeout_food_per_capita,  na.rm = TRUE),
+              despesa_habitacao = survey_mean( despesas_mensais_moradia_per_capita,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( despesas_mensais_vestuario_per_capita,  na.rm = TRUE),
+              despesa_transporte = survey_mean( despesas_mensais_transporte_per_capita,  na.rm = TRUE),
+              despesa_higiene = survey_mean( despesas_mensais_higiene_per_capita,  na.rm = TRUE),
+              despesa_saude = survey_mean( despesas_mensais_saude_per_capita,  na.rm = TRUE),
+              despesa_educacao = survey_mean( despesas_mensais_educacao_per_capita,  na.rm = TRUE),
+              despesa_cultura = survey_mean( despesas_mensais_lazer_per_capita,  na.rm = TRUE),
+              despesa_fumo = survey_mean( despesas_mensais_fumo_per_capita,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( despesas_mensais_servicos_pessoais_per_capita,  na.rm = TRUE),
+              despesa_diversas = survey_mean( despesas_mensais_despesas_diversas_per_capita,  na.rm = TRUE)
+    ) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+             despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+             despesa_serv_pessoais + despesa_diversas) %>%
+    mutate(perc_aliment_orcamento = round(100*despesa_alimentos/despesa_consumo),
+           perc_aliment_no_domicilio = round(100*despesa_alimentos_no_dom/despesa_alimentos)) %>%
+    select(perc_aliment_orcamento, perc_aliment_no_domicilio) %>%
+    as.data.frame()
+  
+  return(df_tab)
+  
+  
+  
+}
+
+
 f_xtile_filter_2002_2008 <- function(df, variavel, var_peso, nova_var, n, estrato) {
   
   x <- 1 / n
@@ -533,8 +607,6 @@ f_medias_2002_2008 <- function(df, percentis) {
               despesa_fumo = survey_mean( despesas_mensais_fumo_per_capita,  na.rm = TRUE),
               despesa_serv_pessoais = survey_mean( despesas_mensais_servicos_pessoais_per_capita,  na.rm = TRUE),
               despesa_diversas = survey_mean( despesas_mensais_despesas_diversas_per_capita,  na.rm = TRUE)
-              
-              
     ) %>%
     mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
              despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
