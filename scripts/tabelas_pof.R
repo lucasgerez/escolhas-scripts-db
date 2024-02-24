@@ -46,7 +46,6 @@ dimensoes <- c('estrato_uf_com_rural', 'estrato_uf_sem_rural',
 
 anos <- c(2002,2008)
 
-
 lst.years <- list()
 
 for (y in anos) {
@@ -86,6 +85,13 @@ for (y in anos) {
                                    weights = ~peso_fam, 
                                    data = pof_estrato, 
                                    check.strata = TRUE))
+    
+    
+    # Calculo do percentual gasto com alimento sem ser por decis
+    
+    f_gasto_alimentacao_estrato(df = pof_svy, estrato = get(d))
+    
+    
     
     
     # Renda domiciliar per capita disponível
