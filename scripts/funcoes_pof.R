@@ -468,7 +468,6 @@ rm(pof)
 
 
 ## Functions for 2002 and 2008 ----
-
 f_gasto_alimentacao_estrato_2002_2008 <- function(df, estrato, region_name, year) {
   
   df <- filter(df, estrato_pof %in% estrato)
@@ -507,11 +506,25 @@ f_gasto_alimentacao_estrato_2002_2008 <- function(df, estrato, region_name, year
 
 # EM CONSTRUÇÃO ......
 # mesma coisa do estrato, mas aqui para o Brasil
-f_gasto_alimentacao_br_2002_2008 <- function(df, estrato) {
+f_gasto_alimentacao_br_2002_2008 <- function(pof_br, region_name, year) {
   
-  df <- filter(df, estrato_pof %in% estrato)
+  pof_br <- pof_br %>% filter(ano == year)
   
-  df_tab <- df %>%
+  aux <- pof_br %>% 
+    group_by(ESTRATO_POF) %>% 
+    summarise(n = n()) %>% 
+    filter(n > 1 )
+  
+  pof_br <- pof_br %>% filter(ESTRATO_POF %in% aux$ESTRATO_POF )
+  
+  
+  pof_svy <- as_survey(svydesign(ids = ~COD_UPA, 
+                                 strata = ~estrato_pof,
+                                 weights = ~peso_fam, 
+                                 data = pof_br, 
+                                 check.strata = TRUE))
+  
+  df_tab <- pof_svy %>%
     summarise(renda_dom_pc_disp = survey_mean( renda_per_capita,  na.rm = TRUE),
               despesa_alimentos = survey_mean( despesas_mensais_alimentacao_per_capita,  na.rm = TRUE),
               despesa_alimentos_no_dom = survey_mean( despesas_mensais_takein_food_per_capita,  na.rm = TRUE),
@@ -532,7 +545,9 @@ f_gasto_alimentacao_br_2002_2008 <- function(df, estrato) {
              despesa_serv_pessoais + despesa_diversas) %>%
     mutate(perc_aliment_orcamento = round(100*despesa_alimentos/despesa_consumo),
            perc_aliment_no_domicilio = round(100*despesa_alimentos_no_dom/despesa_alimentos)) %>%
-    select(perc_aliment_orcamento, perc_aliment_no_domicilio) %>%
+    mutate(unidade_analise = region_name, pof_year = year) %>%
+    select(unidade_analise, pof_year, perc_aliment_orcamento, perc_aliment_no_domicilio) %>%
+    
     as.data.frame()
   
   return(df_tab)
@@ -540,7 +555,6 @@ f_gasto_alimentacao_br_2002_2008 <- function(df, estrato) {
   
   
 }
-
 
 f_xtile_filter_2002_2008 <- function(df, variavel, var_peso, nova_var, n, estrato) {
   

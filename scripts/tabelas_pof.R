@@ -139,6 +139,10 @@ names(lst.years) <- c("y_2002", "y_2008")
 
 bind_rows(lst.food.expend)
 
+# Tabela do Brasil
+f_gasto_alimentacao_br_2002_2008(pof_br = pof_res, region_name = 'Brasil', year = 2002)
+f_gasto_alimentacao_br_2002_2008(pof_br = pof_res, region_name = 'Brasil', year = 2008)
+
 
 # Feito isso vamos exportar as tabelas
 
