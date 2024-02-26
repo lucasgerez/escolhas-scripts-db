@@ -137,41 +137,17 @@ for (y in anos) {
 
 names(lst.years) <- c("y_2002", "y_2008")
 
-bind_rows(lst.food.expend)
+# Acho que faz sentido reorganizar essa tabela na hora de exportar
+tabela_orcamento_alim <- bind_rows(lst.food.expend)
+
 
 # Tabela do Brasil
-f_gasto_alimentacao_br_2002_2008(pof_br = pof_res, region_name = 'Brasil', year = 2002)
-f_gasto_alimentacao_br_2002_2008(pof_br = pof_res, region_name = 'Brasil', year = 2008)
+aux1 <- f_gasto_alimentacao_br_2002_2008(pof_br = pof_res, region_name = 'Brasil', year = 2002)
+aux2 <- f_gasto_alimentacao_br_2002_2008(pof_br = pof_res, region_name = 'Brasil', year = 2008)
 
+# isso vai se juntar com 
+tabela_orcamento_alim
 
-# Feito isso vamos exportar as tabelas
-
-leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
-                       nivel_geografico = c('UF incluindo rural',
-                                            'UF SEM incluir rural',
-                                            'Regiões da UF fora da RM SEM incluir rural',
-                                            'Região Metropolitana (RM)',
-                                            'RM exceto capital (Curitiba)',
-                                            'Capital (Curitiba)'))
-
-sheets <- list("leia_me" = leia.me,
-               "desp_01_2002" = lst.years$y_2002$estrato_uf_com_rural, 
-               "desp_02_2002" = lst.years$y_2002$estrato_uf_sem_rural,
-               "desp_03_2002" = lst.years$y_2002$estrato_uf_sem_rm_sem_rural,
-               "desp_04_2002" = lst.years$y_2002$estrato_rm,
-               "desp_05_2002" = lst.years$y_2002$estrato_rm_sem_capital,
-               "desp_06_2002" = lst.years$y_2002$estrato_capital,
-               
-               "desp_01_2008" = lst.years$y_2008$estrato_uf_com_rural, 
-               "desp_02_2008" = lst.years$y_2008$estrato_uf_sem_rural,
-               "desp_03_2008" = lst.years$y_2008$estrato_uf_sem_rm_sem_rural,
-               "desp_04_2008" = lst.years$y_2008$estrato_rm,
-               "desp_05_2008" = lst.years$y_2008$estrato_rm_sem_capital,
-               "desp_06_2008" = lst.years$y_2008$estrato_capital
-)
-
-
-write.xlsx(sheets, file = file.path(result_path, "pof_tabelas_grandes_grupos_2002_2008.xlsx"))
 
 
 
@@ -410,6 +386,39 @@ write.xlsx(sheets, file = file.path(result_path, "pof_tabelas_2018.xlsx"))
 
 
 
+
+# Exportando as tableas ----
+
+# TEMOS QUE JUNTAR COM AS DE 2018
+
+# Feito isso vamos exportar as tabelas (de 2002 a 2018)
+
+leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
+                       nivel_geografico = c('UF incluindo rural',
+                                            'UF SEM incluir rural',
+                                            'Regiões da UF fora da RM SEM incluir rural',
+                                            'Região Metropolitana (RM)',
+                                            'RM exceto capital (Curitiba)',
+                                            'Capital (Curitiba)'))
+
+sheets <- list("leia_me" = leia.me,
+               "desp_01_2002" = lst.years$y_2002$estrato_uf_com_rural, 
+               "desp_02_2002" = lst.years$y_2002$estrato_uf_sem_rural,
+               "desp_03_2002" = lst.years$y_2002$estrato_uf_sem_rm_sem_rural,
+               "desp_04_2002" = lst.years$y_2002$estrato_rm,
+               "desp_05_2002" = lst.years$y_2002$estrato_rm_sem_capital,
+               "desp_06_2002" = lst.years$y_2002$estrato_capital,
+               
+               "desp_01_2008" = lst.years$y_2008$estrato_uf_com_rural, 
+               "desp_02_2008" = lst.years$y_2008$estrato_uf_sem_rural,
+               "desp_03_2008" = lst.years$y_2008$estrato_uf_sem_rm_sem_rural,
+               "desp_04_2008" = lst.years$y_2008$estrato_rm,
+               "desp_05_2008" = lst.years$y_2008$estrato_rm_sem_capital,
+               "desp_06_2008" = lst.years$y_2008$estrato_capital
+)
+
+
+write.xlsx(sheets, file = file.path(result_path, "curitiba_pof_tabelas.xlsx"))
 
 
 
