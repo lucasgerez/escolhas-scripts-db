@@ -49,11 +49,6 @@ for (p in 1:nrow(periodo)) {
   
   pnad_file <- pnad_lst$variables 
   
-  # save(pnad_file, 
-  #      file = paste0('F:/Drive/BASES DE DADOS BRUTOS/PNAD_CONTÍNUA_IBGE/Anual/Raw_data_R/',
-  #                    'pnad_anual_', periodo[p,]$ano, '_visita' ,periodo[p,]$visita, '.rdata'), 
-  #      version = 2, compress = T)
-  
   pnad.path <- 'F:/Drive/BASES DE DADOS BRUTOS/PNAD_CONTÍNUA_IBGE/Anual/Raw_data_R'
   
   # salvando o arquivo de cada entrevista anual
@@ -73,26 +68,7 @@ for (p in 1:nrow(periodo)) {
   
 }
 
-# 
-# 
-# 
-# # PNAD Continua trimestral ---------
-# 
-# 
-# 
-# # Teste com um trimestre
-# 
-# 
-# 
-# survey_design_df <- svydesign(
-#   
-#   id = ~UPA,
-#   strata = ~Estrato,
-#   weights = ~V1027,
-#   data = pnad_file$variables
-#   
-# )
-# 
+
 
 
 

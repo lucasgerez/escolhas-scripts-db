@@ -14,8 +14,10 @@
 # export <- 'C:/Users/ricar/Documents/consultoria/gerez/resultados'
 
 
+cat('Loading the packages .... \n')
 # Pacotes
-load.lib <- c( "tidyr", "dplyr", "openxlsx", "survey", "srvyr" )
+load.lib <- c( "tidyr", "dplyr", "openxlsx", "survey", "srvyr", 'Hmisc', 'janitor' )
+
 
 # Carregando os pacotes e instalando o que ainda não temos
 install.lib <- load.lib[ !load.lib %in% installed.packages() ]
@@ -27,9 +29,10 @@ rm(list = c("install.lib", "lib", "load.lib"))
 
 # Funcoes POF 2002 e 2008 -------------------------------------------------
 
+cat('Loading the required functions .... \n')
 
 # Função para a POF de 2002 a 2008
-f_xtile_filter_2002_2008 <- function(df, variavel, var_peso, nova_var, n, estrato, estrato_var_name = 'estrato_pof') {
+f_xtile_filter_2018 <- function(df, variavel, var_peso, nova_var, n, estrato, estrato_var_name = 'estrato_pof') {
   
   x <- 1 / n
   
@@ -47,8 +50,8 @@ f_xtile_filter_2002_2008 <- function(df, variavel, var_peso, nova_var, n, estrat
 
 
 # Calculo da renda pc 
-f_inc_dist_filter_2002_2008 <- function(pof_svy, variavel, var_peso, nova_var, n, estrato, 
-                                        estrato_var_name = 'estrato_pof') {
+f_inc_dist_filter_2018 <- function(pof_svy, variavel, var_peso, nova_var, n, estrato, 
+                                   estrato_var_name = 'estrato_pof') {
   
   options(warn = -1)
   
@@ -64,6 +67,7 @@ f_inc_dist_filter_2002_2008 <- function(pof_svy, variavel, var_peso, nova_var, n
   
   df <- filter(df, {{estrato_var_name}} %in% estrato)
   
+  
   percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
   
   tab <- data.frame(decis = 1:(n+1), renda_dom_pc_disp = c(percentis[-1], aux$renda_dom_pc_disp))
@@ -78,49 +82,35 @@ f_inc_dist_filter_2002_2008 <- function(pof_svy, variavel, var_peso, nova_var, n
 }
 
 # Despesas gerais
-f_medias_2002_2008 <- function(df, percentis) {
-  
-  df <- df %>%
-    group_by({{percentis}}) %>%
-    summarise(despesa_total = survey_mean( despesas_mensais_totais_per_capita,  na.rm = TRUE),
-              despesa_alimentos = survey_mean( despesas_mensais_alimentacao_per_capita,  na.rm = TRUE),
-              despesa_habitacao = survey_mean( despesas_mensais_moradia_per_capita,  na.rm = TRUE),
-              despesa_transporte = survey_mean( despesas_mensais_transporte_per_capita,  na.rm = TRUE),
-              despesa_saude = survey_mean( despesas_mensais_saude_per_capita,  na.rm = TRUE),
-              despesa_emprestimo = survey_mean( despesas_mensais_emprestimos_per_capita,  na.rm = TRUE)
-    ) %>%
-    mutate(despesa_outras = despesa_total - (despesa_alimentos + despesa_habitacao +
-                                               despesa_transporte + despesa_saude + 
-                                               despesa_emprestimo) ) %>%
-    
-    select(-(ends_with("_se"))) %>%
-    as.data.frame()
-  
-  return(df)
-  
-}
-
 f_medias_2018 <- function(df, percentis) {
   
   # Vamos substituir os missings por zero
   df$variables[is.na(df$variables)] <- 0
   
+  
   df <- df %>%
-    group_by({{percentis}}) %>%
+    group_by({{percentis}}) %>% # 
     summarise(despesa_total = survey_mean( sum_desp_nivel3/pessoas_dom,  na.rm = TRUE),
               despesa_alimentos = survey_mean( pc_desp_nivel3_Alimentacao,  na.rm = TRUE),
               despesa_alimentos_no_dom = survey_mean( pc_desp_nivel4_Alimentacao_no_dom,  na.rm = TRUE),
               despesa_alimentos_fora_dom = survey_mean( pc_desp_nivel4_Alimentacao_fora_dom,  na.rm = TRUE),
               despesa_habitacao = survey_mean( pc_desp_nivel3_Habitacao,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( pc_desp_nivel3_Vestuario,  na.rm = TRUE),
               despesa_transporte = survey_mean( pc_desp_nivel3_Transporte,  na.rm = TRUE),
+              despesa_higiene = survey_mean( pc_desp_nivel3_Higiene,  na.rm = TRUE),
               despesa_saude = survey_mean( pc_desp_nivel3_Saude,  na.rm = TRUE),
-              despesa_emprestimo = survey_mean( pc_desp_nivel3_emprestimo,  na.rm = TRUE)
+              despesa_educacao = survey_mean( pc_desp_nivel3_Educacao,  na.rm = TRUE),
+              despesa_cultura = survey_mean( pc_desp_nivel3_Lazer_e_cult,  na.rm = TRUE),
+              despesa_fumo = survey_mean( pc_desp_nivel3_Fumo,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( pc_desp_nivel3_Serv_pessoais,  na.rm = TRUE),
+              despesa_diversas = survey_mean( pc_desp_nivel3_diversos,  na.rm = TRUE)
     ) %>%
-    mutate(despesa_outras = despesa_total - (despesa_alimentos + despesa_habitacao +
-                                               despesa_transporte + despesa_saude + 
-                                               despesa_emprestimo) ) %>%
-    
-    select(-(ends_with("_se"))) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+             despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+             despesa_serv_pessoais + despesa_diversas) %>%
+    select({{percentis}}, despesa_total, despesa_consumo, despesa_alimentos,
+           despesa_alimentos_no_dom, despesa_alimentos_fora_dom,
+           despesa_habitacao, despesa_vestuario, despesa_transporte, despesa_saude ) %>%
     as.data.frame()
   
   return(df)
@@ -408,197 +398,241 @@ f_inseguranca_2018 <- function(df) {
 }
 
 
-# ANTIGO ----  ------------------------------------------------------------
+# Função para a POF de 2002 a 2008
 
-# f_xtile_filter_2018 <- function(df, variavel, var_peso, nova_var, n, estrato) {
-#   
-#   x <- 1 / n
-#   
-#   df <- filter(df, estrato_pof %in% estrato)
-#   
-#   percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
-#   df[[nova_var]] <- cut(df[[variavel]], 
-#                         breaks = percentis,
-#                         labels = F, 
-#                         include.lowest = T, 
-#                         na.pass = TRUE)
-#   return(df)
-#   
-# }
-# f_medias_2018 <- function(df, percentis) {
-#   
-#   df <- df %>%
-#     group_by({{percentis}}) %>%
-#     summarise(despesa_total = survey_mean( desp_total_pc,  na.rm = TRUE),
-#               despesa_alimentos = survey_mean( desp_pc_g1,  na.rm = TRUE),
-#               despesa_habitacao = survey_mean( desp_pc_g2,  na.rm = TRUE),
-#               despesa_transporte = survey_mean( desp_pc_g4,  na.rm = TRUE),
-#               despesa_saude = survey_mean( desp_pc_g6,  na.rm = TRUE),
-#               despesa_emprestimo = survey_mean( desp_pc_g19,  na.rm = TRUE)
-#     ) %>%
-#     mutate(despesa_outras = despesa_total - (despesa_alimentos + despesa_habitacao +
-#                                                despesa_transporte + despesa_saude + 
-#                                                despesa_emprestimo) ) %>%
-#     
-#     select(-(ends_with("_se"))) %>%
-#     as.data.frame()
-#   
-#   return(df)
-#   
-# }
+cat('\n\n Getting the data .... ')
 
-# 
-# # Criar funcoes para tabelas -----------------------------------------------------
-# # Tabelas são por grupos de consumo e por estrato definido
-# 
-# f_xtile_filter <- function(df, variavel, var_peso, nova_var, n, estrato) {
-#   
-#   x <- 1 / n
-#   
-#   df <- filter(df, ESTRATO_POF %in% estrato)
-#   
-#   percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
-#   df[[nova_var]] <- cut(df[[variavel]], 
-#       breaks = percentis,
-#       labels = F, 
-#       include.lowest = T, 
-#       na.pass = TRUE)
-#   return(df)
-#   
-# }
-# 
-# 
-# # Calculo da renda pc 
-# f_inc_dist_filter <- function(pof_svy, variavel, var_peso, nova_var, n, estrato) {
-#   
-#   options(warn = -1)
-#   
-#   # Cálculo da Renda dom pc total
-#   
-#   aux <- pof_svy %>%
-#     summarise(renda_dom_pc_disp = survey_mean( PC_RENDA_DISP,  na.rm = TRUE)) %>%
-#     select(renda_dom_pc_disp) %>%
-#     as.data.frame()
-#   
-#   df <- pof_svy$variables
-#   
-#   x <- 1 / n
-#   
-#   df <- filter(df, ESTRATO_POF %in% estrato)
-#   
-#   percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
-#   
-#   tab <- data.frame(decis = 1:(n+1), renda_dom_pc_disp = c(percentis[-1], aux$renda_dom_pc_disp))
-#   
-#   tab$renda_dom_pc_disp <- paste0("R$ ", prettyNum(round(tab$renda_dom_pc_disp,0), big.mark = ".", small.mark = ","))
-#   tab$renda_dom_pc_disp[1] <- paste0("Até ", tab$renda_dom_pc_disp[1])
-#   tab$renda_dom_pc_disp[10] <- paste0("Acima de ", tab$renda_dom_pc_disp[9])
-#   tab$decis[11] <- 'Total'
-#   
-#   return(tab)
-#   
-# }
-# 
-# 
-# 
-# 
-# # Apenas as médias por decis --------------------------------------------------#
-# 
-# f_medias <- function(df, percentis) {
-#   
-#   df <- df %>%
-#     group_by({{percentis}}) %>%
-#     summarise(despesa_total = survey_mean( desp_total_pc  ,  na.rm = TRUE)) %>%
-#     select(-(ends_with("_se"))) %>%
-#     as.data.frame()
-#   
-#   return(df)
-#   
-# }
-# 
-# f_medias_mon <- function(df, percentis) {
-#   
-#   df <- df %>%
-#     group_by({{percentis}}) %>%
-#     summarise(despesa_total_mon = survey_mean( desp_total_mon_pc  ,  na.rm = TRUE)) %>%
-#     select(-(ends_with("_se"))) %>%
-#     as.data.frame()
-#   
-#   return(df)
-#   
-# }
-# 
-# # Por grupos de consumo -------------------------------------------------------#
-# # totais
-# f_medias_g <- function(df, percentis) {
-#   
-#   df <- df %>%
-#     group_by({{percentis}}) %>%
-#     summarise(across(desp_pc_g1:desp_pc_g22, \(x) survey_mean(x,  na.rm = TRUE))) %>%
-#     select(-(ends_with("_se"))) %>%
-#     as.data.frame()
-#   
-#   return(df)
-#   
-# }
-#   
-# f_perc_medios_g <- function(df, percentis) {
-#   
-#   df <- df %>%
-#     group_by({{percentis}}) %>%
-#     summarise(across(starts_with("perc_g"), \(x) survey_mean(x,  na.rm = TRUE))) %>%
-#     select(-(ends_with("_se"))) %>%
-#     as.data.frame()
-#   
-#   return(df)
-#   
-# }
-# 
-# f_totais_g <- function(df, percentis) {
-#   
-#   df <- df %>%
-#     group_by({{percentis}}) %>%
-#     summarise(across(desp_pc_g1:desp_pc_g22, \(x) survey_total(x,  na.rm = TRUE))) %>%
-#     select(-(ends_with("_se"))) %>%
-#     as.data.frame()
-#   
-#   return(df)
-# }
-#   
-# # monetarios
-# f_medias_mon_g <- function(df, percentis) {
-#   
-#   df <- df %>%
-#     group_by({{percentis}}) %>%
-#     summarise(across(desp_mon_pc_g1:desp_mon_pc_g22, \(x) survey_mean(x,  na.rm = TRUE))) %>%
-#     select(-(ends_with("_se"))) %>%
-#     as.data.frame()
-#   
-#   return(df)
-# }
-#   
-# f_perc_mon_medios_g <- function(df, percentis) {
-#   
-#   df <- df %>%
-#     group_by({{percentis}}) %>%
-#     summarise(across(starts_with("perc_mon_g"), \(x) survey_mean(x,  na.rm = TRUE))) %>%
-#     select(-(ends_with("_se"))) %>%
-#     as.data.frame()
-#   
-#   return(df)
-#   
-# }
-#   
-# f_totais_mon_g <- function(df, percentis) {
-#   
-#   df <- df %>%
-#     group_by({{percentis}}) %>%
-#     summarise(across(desp_mon_pc_g1:desp_mon_pc_g22, \(x) survey_total(x,  na.rm = TRUE))) %>%
-#     select(-(ends_with("_se"))) %>%
-#     as.data.frame()
-#   
-#   return(df)
-# }
+pof_2002 <- read.csv('F:/Drive/BASES DE DADOS BRUTOS/POF/POF 2002-2003/raw/pof_2002.csv') %>% clean_names()
+
+cat('\nTabela wide da Pof 2002:', nrow(pof_2002), 'linhas...')
+
+pof_2008 <- read.csv('F:/Drive/BASES DE DADOS BRUTOS/POF/POF 2008-2009/raw/pof_2008.csv') %>% clean_names()
+
+cat('\nTabela wide da Pof 2008:', nrow(pof_2008), 'linhas...')
+
+# Adicionando a variável de ano
+pof_2002$ano <- 2002
+pof_2008$ano <- 2008
+
+# Vamos renomear algumas variaveis de 2008 para facilitar
+pof_2008 <- pof_2008 %>% 
+  rename(uf = cod_uf, 
+         estrato = cod_domc,
+         n_morador = qtd_morador_domc,
+         fator = fator_expansao2,
+         domcl = cod_tipo_domc,
+         quant_uc = qtd_uc,
+         renda_per_capita = renda_total_per_capita)
+
+
+# Juntando as duas POFs
+pof <- bind_rows( pof_2002, pof_2008 )
+
+# Ficando apenas com o painel completo 
+rm(pof_2002, pof_2008); gc()
+
+
+# Criação da variável estrato igual em 2018
+pof <- pof %>% 
+  mutate( estrato_pof = case_when(
+    estrato < 10 ~ paste0(uf, "0", estrato),
+    estrato >= 10 ~ paste0(uf, estrato)
+  )) %>% 
+  mutate(estrato_pof = as.numeric(estrato_pof),
+         peso_fam = n_morador*fator, 
+         COD_UPA = as.numeric(paste0(uf, estrato_pof,
+                                     tipo_reg, domcl, id_dom, quant_uc))) 
+
+# Vamos ficar apenas com as variáveis necessárias à tabela (todos os intens de consumo devem ser incluidos)
+
+pof_res <- pof %>% select(ano, uf, estrato_pof,
+                          tipo_reg, domcl, 
+                          id_dom, quant_uc,
+                          peso_fam, COD_UPA,
+                          despesas_mensais_totais_per_capita, 
+                          despesas_mensais_alimentacao_per_capita,
+                          despesas_mensais_takein_food_per_capita,
+                          despesas_mensais_takeout_food_per_capita,
+                          despesas_mensais_moradia_per_capita,
+                          despesas_mensais_vestuario_per_capita,
+                          despesas_mensais_transporte_per_capita, 
+                          despesas_mensais_higiene_per_capita,
+                          despesas_mensais_saude_per_capita,
+                          despesas_mensais_educacao_per_capita,
+                          despesas_mensais_lazer_per_capita,
+                          despesas_mensais_fumo_per_capita,
+                          despesas_mensais_servicos_pessoais_per_capita,
+                          despesas_mensais_despesas_diversas_per_capita,
+                          renda_per_capita)
+rm(pof)
+
+
+## Functions for 2002 and 2008 ----
+f_gasto_alimentacao_estrato_2002_2008 <- function(df, estrato, region_name, year) {
+  
+  df <- filter(df, estrato_pof %in% estrato)
+  
+  df_tab <- df %>%
+    summarise(renda_dom_pc_disp = survey_mean( renda_per_capita,  na.rm = TRUE),
+              despesa_alimentos = survey_mean( despesas_mensais_alimentacao_per_capita,  na.rm = TRUE),
+              despesa_alimentos_no_dom = survey_mean( despesas_mensais_takein_food_per_capita,  na.rm = TRUE),
+              despesa_alimentos_fora_dom = survey_mean( despesas_mensais_takeout_food_per_capita,  na.rm = TRUE),
+              despesa_habitacao = survey_mean( despesas_mensais_moradia_per_capita,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( despesas_mensais_vestuario_per_capita,  na.rm = TRUE),
+              despesa_transporte = survey_mean( despesas_mensais_transporte_per_capita,  na.rm = TRUE),
+              despesa_higiene = survey_mean( despesas_mensais_higiene_per_capita,  na.rm = TRUE),
+              despesa_saude = survey_mean( despesas_mensais_saude_per_capita,  na.rm = TRUE),
+              despesa_educacao = survey_mean( despesas_mensais_educacao_per_capita,  na.rm = TRUE),
+              despesa_cultura = survey_mean( despesas_mensais_lazer_per_capita,  na.rm = TRUE),
+              despesa_fumo = survey_mean( despesas_mensais_fumo_per_capita,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( despesas_mensais_servicos_pessoais_per_capita,  na.rm = TRUE),
+              despesa_diversas = survey_mean( despesas_mensais_despesas_diversas_per_capita,  na.rm = TRUE)
+    ) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+           despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+           despesa_serv_pessoais + despesa_diversas) %>%
+    mutate(perc_aliment_orcamento = round(100*despesa_alimentos/despesa_consumo),
+           perc_aliment_no_domicilio = round(100*despesa_alimentos_no_dom/despesa_alimentos)) %>%
+    mutate(unidade_analise = region_name, pof_year = year) %>%
+    select(unidade_analise, pof_year, perc_aliment_orcamento, perc_aliment_no_domicilio) %>%
+    
+    as.data.frame()
+  
+  return(df_tab)
+  
+  
+  
+}
+
+# EM CONSTRUÇÃO ......
+# mesma coisa do estrato, mas aqui para o Brasil
+f_gasto_alimentacao_br_2002_2008 <- function(pof_br, region_name, year) {
+  
+  pof_br <- pof_br %>% filter(ano == year)
+  
+  aux <- pof_br %>% 
+    group_by(ESTRATO_POF) %>% 
+    summarise(n = n()) %>% 
+    filter(n > 1 )
+  
+  pof_br <- pof_br %>% filter(ESTRATO_POF %in% aux$ESTRATO_POF )
+  
+  
+  pof_svy <- as_survey(svydesign(ids = ~COD_UPA, 
+                                 strata = ~estrato_pof,
+                                 weights = ~peso_fam, 
+                                 data = pof_br, 
+                                 check.strata = TRUE))
+  
+  df_tab <- pof_svy %>%
+    summarise(renda_dom_pc_disp = survey_mean( renda_per_capita,  na.rm = TRUE),
+              despesa_alimentos = survey_mean( despesas_mensais_alimentacao_per_capita,  na.rm = TRUE),
+              despesa_alimentos_no_dom = survey_mean( despesas_mensais_takein_food_per_capita,  na.rm = TRUE),
+              despesa_alimentos_fora_dom = survey_mean( despesas_mensais_takeout_food_per_capita,  na.rm = TRUE),
+              despesa_habitacao = survey_mean( despesas_mensais_moradia_per_capita,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( despesas_mensais_vestuario_per_capita,  na.rm = TRUE),
+              despesa_transporte = survey_mean( despesas_mensais_transporte_per_capita,  na.rm = TRUE),
+              despesa_higiene = survey_mean( despesas_mensais_higiene_per_capita,  na.rm = TRUE),
+              despesa_saude = survey_mean( despesas_mensais_saude_per_capita,  na.rm = TRUE),
+              despesa_educacao = survey_mean( despesas_mensais_educacao_per_capita,  na.rm = TRUE),
+              despesa_cultura = survey_mean( despesas_mensais_lazer_per_capita,  na.rm = TRUE),
+              despesa_fumo = survey_mean( despesas_mensais_fumo_per_capita,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( despesas_mensais_servicos_pessoais_per_capita,  na.rm = TRUE),
+              despesa_diversas = survey_mean( despesas_mensais_despesas_diversas_per_capita,  na.rm = TRUE)
+    ) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+             despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+             despesa_serv_pessoais + despesa_diversas) %>%
+    mutate(perc_aliment_orcamento = round(100*despesa_alimentos/despesa_consumo),
+           perc_aliment_no_domicilio = round(100*despesa_alimentos_no_dom/despesa_alimentos)) %>%
+    mutate(unidade_analise = region_name, pof_year = year) %>%
+    select(unidade_analise, pof_year, perc_aliment_orcamento, perc_aliment_no_domicilio) %>%
+    
+    as.data.frame()
+  
+  return(df_tab)
+  
+  
+  
+}
+
+f_xtile_filter_2002_2008 <- function(df, variavel, var_peso, nova_var, n, estrato) {
+  
+  x <- 1 / n
+  
+  df <- filter(df, estrato_pof %in% estrato)
+  
+  percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
+  df[[nova_var]] <- cut(df[[variavel]], 
+                        breaks = percentis,
+                        labels = F, 
+                        include.lowest = T, 
+                        na.pass = TRUE)
+  return(df)
+  
+}
+
+# Calculo da renda pc 
+f_inc_dist_filter_2002_2008 <- function(pof_svy, variavel, var_peso, nova_var, n, estrato) {
+  
+  options(warn = -1)
+  
+  # Cálculo da Renda dom pc total
+  aux <- pof_svy %>%
+    summarise(renda_dom_pc_disp = survey_mean( get(variavel),  na.rm = TRUE)) %>%
+    select(renda_dom_pc_disp) %>%
+    as.data.frame()
+  
+  df <- pof_svy$variables
+  
+  x <- 1 / n
+  
+  df <- filter(df, estrato_pof %in% estrato)
+  
+  percentis <-  wtd.quantile( df[[variavel]], weights = df[[var_peso]], probs = seq(0,1,x) )
+  
+  tab <- data.frame(decis = 1:(n+1), renda_dom_pc_disp = c(percentis[-1], aux$renda_dom_pc_disp))
+  
+  tab$renda_dom_pc_disp <- paste0("R$ ", prettyNum(round(tab$renda_dom_pc_disp,0), big.mark = ".", small.mark = ","))
+  tab$renda_dom_pc_disp[1] <- paste0("Até ", tab$renda_dom_pc_disp[1])
+  tab$renda_dom_pc_disp[10] <- paste0("Acima de ", tab$renda_dom_pc_disp[9])
+  tab$decis[11] <- 'Total'
+  
+  return(tab)
+  
+}
+
+# Despesas gerais
+f_medias_2002_2008 <- function(df, percentis) {
+  
+  df <- df %>%
+    group_by({{percentis}}) %>%
+    summarise(despesa_total = survey_mean( despesas_mensais_totais_per_capita,  na.rm = TRUE),
+              despesa_alimentos = survey_mean( despesas_mensais_alimentacao_per_capita,  na.rm = TRUE),
+              despesa_alimentos_no_dom = survey_mean( despesas_mensais_takein_food_per_capita,  na.rm = TRUE),
+              despesa_alimentos_fora_dom = survey_mean( despesas_mensais_takeout_food_per_capita,  na.rm = TRUE),
+              despesa_habitacao = survey_mean( despesas_mensais_moradia_per_capita,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( despesas_mensais_vestuario_per_capita,  na.rm = TRUE),
+              despesa_transporte = survey_mean( despesas_mensais_transporte_per_capita,  na.rm = TRUE),
+              despesa_higiene = survey_mean( despesas_mensais_higiene_per_capita,  na.rm = TRUE),
+              despesa_saude = survey_mean( despesas_mensais_saude_per_capita,  na.rm = TRUE),
+              despesa_educacao = survey_mean( despesas_mensais_educacao_per_capita,  na.rm = TRUE),
+              despesa_cultura = survey_mean( despesas_mensais_lazer_per_capita,  na.rm = TRUE),
+              despesa_fumo = survey_mean( despesas_mensais_fumo_per_capita,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( despesas_mensais_servicos_pessoais_per_capita,  na.rm = TRUE),
+              despesa_diversas = survey_mean( despesas_mensais_despesas_diversas_per_capita,  na.rm = TRUE)
+    ) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+             despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+             despesa_serv_pessoais + despesa_diversas) %>%
+    select({{percentis}}, despesa_total, despesa_consumo, despesa_alimentos, despesa_alimentos_no_dom, despesa_alimentos_fora_dom, despesa_habitacao, despesa_vestuario, despesa_transporte, despesa_saude ) %>%
+    as.data.frame()
+  
+  return(df)
+  
+}
+
+cat("Let's go to the tables")
 
 
 
