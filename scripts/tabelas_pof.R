@@ -271,7 +271,6 @@ for (d in dimensoes) {
   t6 <- round(t4[-1]/t5[-1],2)
   t6 <- cbind(t4[,1], t6)
   
-  
   cat('\n     Tabela 6 - R$/Kcal consumido', paste(Sys.time()))
   
   # Tabela 6: R$/Kcal consumido
@@ -280,6 +279,13 @@ for (d in dimensoes) {
   
   # Tabela 7: Insegurança alimentar e intersecções
   lst.inseguranca[[match(d, dimensoes)]] <- f_inseguranca_2018(pof_svy)
+  
+  
+  ## FALTA INCLUIR ----
+  
+  # Tabela com AQUISIÇAO DE PRODUTOS EM KG - para isso temos que reprocessar a POF
+  
+  
   
   
 }
