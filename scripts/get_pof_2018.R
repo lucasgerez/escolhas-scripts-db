@@ -385,7 +385,8 @@ consumo_nutrientes <- CONSUMO_ALIMENTAR %>%
   filter(!is.na(ENERGIA_KCAL)) %>%
   group_by(across(all_of(c(var_dom))))%>%
   summarise(consumo_kcal = sum(ENERGIA_KCAL, na.rm = TRUE),
-            consumo_kj = sum(ENERGIA_KJ, na.rm = TRUE))  
+            consumo_kj = sum(ENERGIA_KJ, na.rm = TRUE),
+            consumo_gramas = sum(GRAMATURA1, na.rm = TRUE))  
 
 consumo.tipo.proc <-  
   CONSUMO_ALIMENTAR %>%
