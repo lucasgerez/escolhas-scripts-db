@@ -92,10 +92,15 @@ for (y in anos) {
     
     # Calculo do percentual gasto com alimento sem ser por decis
     
+    cat('\n    Tabela de gastos com alimentos dentro e fora do dom ...')
+    
+    
     aux2 <- f_gasto_alimentacao_estrato_2002_2008(df = pof_svy, estrato = get(d), region_name = d, year = y)
     
     lst.food.expend[[paste0(aux2$unidade_analise,"_", aux2$pof_year)]] <- aux2
     
+    
+    cat('\n    Tabela de gastos por grandes grupos por decis ...')
     
     # Renda domiciliar per capita disponível
     tab_renda <- f_inc_dist_filter_2002_2008(pof_svy = pof_svy,
@@ -123,14 +128,6 @@ for (y in anos) {
   # nomes para facilitar
   names(lst.tab) <- dimensoes
 
-  leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
-                         nivel_geografico = c('UF incluindo rural',
-                                              'UF SEM incluir rural',
-                                              'Regiões da UF fora da RM SEM incluir rural',
-                                              'Região Metropolitana (RM)',
-                                              'RM exceto capital (Curitiba)',
-                                              'Capital (Curitiba)'))
-
   lst.years[[match(y, anos)]] <- lst.tab
   
 }
@@ -144,6 +141,8 @@ tabela_orcamento_alim <- bind_rows(lst.food.expend)
 # Tabela do Brasil
 aux1 <- f_gasto_alimentacao_br_2002_2008(pof_br = pof_res, region_name = 'Brasil', year = 2002)
 aux2 <- f_gasto_alimentacao_br_2002_2008(pof_br = pof_res, region_name = 'Brasil', year = 2008)
+
+# temos que calcular isso para 2018 tbm
 
 # isso vai se juntar com 
 tabela_orcamento_alim
@@ -282,10 +281,17 @@ for (d in dimensoes) {
   lst.inseguranca[[match(d, dimensoes)]] <- f_inseguranca_2018(pof_svy)
   
   
-  ## FALTA INCLUIR ----
+  ## Kg ----
+  
+  cat('\n     Tabela 7 - Kg anuais consumidos', paste(Sys.time()))
   
   # Tabela com AQUISIÇAO DE PRODUTOS EM KG - para isso temos que reprocessar a POF
   
+  # Kcal consumido
+  t7 <- f_alimentos_kg_2018(pof_svy)
+  
+  # Tabela 5
+  lst.kg[[match(d, dimensoes)]] <- t7 
   
   
   
@@ -299,6 +305,116 @@ names(lst.proc)        <- dimensoes
 names(lst.kcal)        <- dimensoes
 names(lst.reais.kcal)  <- dimensoes
 names(lst.inseguranca) <- dimensoes
+names(lst.kg)          <- dimensoes
+
+
+# leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
+#                        nivel_geografico = c('UF incluindo rural',
+#                                             'UF SEM incluir rural',
+#                                             'Regiões da UF fora da RM SEM incluir rural',
+#                                             'Região Metropolitana (RM)',
+#                                             'RM exceto capital (Curitiba)',
+#                                             'Capital (Curitiba)'))
+# 
+# lst.tab$estrato_uf_com_rural
+# lst.perc$estrato_uf_com_rural
+# lst.fora.dom$estrato_uf_com_rural
+# lst.proc$estrato_uf_com_rural
+# lst.kcal$estrato_uf_com_rural
+# lst.reais.kcal$estrato_uf_com_rural
+# 
+# 
+# sheets <- list("leia_me" = leia.me,
+#                
+#                # Bloco 1: Despesas nos grandes grupos
+#                "desp_grupo_01_2018" = lst.tab$estrato_uf_com_rural, 
+#                "desp_grupo_02_2018" = lst.tab$estrato_uf_sem_rural,
+#                "desp_grupo_03_2018" = lst.tab$estrato_uf_sem_rm_sem_rural,
+#                "desp_grupo_04_2018" = lst.tab$estrato_rm,
+#                "desp_grupo_05_2018" = lst.tab$estrato_rm_sem_capital,
+#                "desp_grupo_06_2018" = lst.tab$estrato_capital,
+#                
+#                # Bloco 2: share por tipo de alimento
+#                "desp_alim_dom_01_2018" = as.data.frame(lst.perc$estrato_uf_com_rural), 
+#                "desp_alim_dom_02_2018" = lst.perc$estrato_uf_sem_rural,
+#                "desp_alim_dom_03_2018" = lst.perc$estrato_uf_sem_rm_sem_rural,
+#                "desp_alim_dom_04_2018" = lst.perc$estrato_rm,
+#                "desp_alim_dom_05_2018" = lst.perc$estrato_rm_sem_capital,
+#                "desp_alim_dom_06_2018" = lst.perc$estrato_capital,
+#                
+#                # Bloco 3: share por tipo de alimento FORA do domicilio
+#                "desp_alim_fora_dom_01_2018" = lst.fora.dom$estrato_uf_com_rural, 
+#                "desp_alim_fora_dom_02_2018" = lst.fora.dom$estrato_uf_sem_rural,
+#                "desp_alim_fora_dom_03_2018" = lst.fora.dom$estrato_uf_sem_rm_sem_rural,
+#                "desp_alim_fora_dom_04_2018" = lst.fora.dom$estrato_rm,
+#                "desp_alim_fora_dom_05_2018" = lst.fora.dom$estrato_rm_sem_capital,
+#                "desp_alim_fora_dom_06_2018" = lst.fora.dom$estrato_capital,
+#                
+#                # Bloco 4: share por tipo de processamento
+#                "desp_alim_tipo_proc_01_2018" = lst.proc$estrato_uf_com_rural, 
+#                "desp_alim_tipo_proc_02_2018" = lst.proc$estrato_uf_sem_rural,
+#                "desp_alim_tipo_proc_03_2018" = lst.proc$estrato_uf_sem_rm_sem_rural,
+#                "desp_alim_tipo_proc_04_2018" = lst.proc$estrato_rm,
+#                "desp_alim_tipo_proc_05_2018" = lst.proc$estrato_rm_sem_capital,
+#                "desp_alim_tipo_proc_06_2018" = lst.proc$estrato_capital,
+#                
+#                # consumo em kg por tipo de alimento
+#                "consumo_kg_01_2018" = lst.kg$estrato_uf_com_rural, 
+#                "consumo_kg_02_2018" = lst.kg$estrato_uf_sem_rural,
+#                "consumo_kg_03_2018" = lst.kg$estrato_uf_sem_rm_sem_rural,
+#                "consumo_kg_04_2018" = lst.kg$estrato_rm,
+#                "consumo_kg_05_2018" = lst.kg$estrato_rm_sem_capital,
+#                "consumo_kg_06_2018" = lst.kg$estrato_capital,
+#                
+#                
+#                # Bloco 5: share por tipo de processamento
+#                "consumo_perc_kcal_01_2018" = lst.kcal$estrato_uf_com_rural, 
+#                "consumo_perc_kcal_02_2018" = lst.kcal$estrato_uf_sem_rural,
+#                "consumo_perc_kcal_03_2018" = lst.kcal$estrato_uf_sem_rm_sem_rural,
+#                "consumo_perc_kcal_04_2018" = lst.kcal$estrato_rm,
+#                "consumo_perc_kcal_05_2018" = lst.kcal$estrato_rm_sem_capital,
+#                "consumo_perc_kcal_06_2018" = lst.kcal$estrato_capital,
+#                
+#                
+#                # Bloco 6: share por tipo de processamento
+#                "reais_por_kcal_01_2018" = lst.reais.kcal$estrato_uf_com_rural, 
+#                "reais_por_kcal_02_2018" = lst.reais.kcal$estrato_uf_sem_rural,
+#                "reais_por_kcal_03_2018" = lst.reais.kcal$estrato_uf_sem_rm_sem_rural,
+#                "reais_por_kcal_04_2018" = lst.reais.kcal$estrato_rm,
+#                "reais_por_kcal_05_2018" = lst.reais.kcal$estrato_rm_sem_capital,
+#                "reais_por_kcal_06_2018" = lst.reais.kcal$estrato_capital,
+#                
+#                
+#                # Bloco 7: insegurança alimentar
+#                "inseg_alim_01_2018" = lst.inseguranca$estrato_uf_com_rural, 
+#                "inseg_alim_02_2018" = lst.inseguranca$estrato_uf_sem_rural,
+#                "inseg_alim_03_2018" = lst.inseguranca$estrato_uf_sem_rm_sem_rural,
+#                "inseg_alim_04_2018" = lst.inseguranca$estrato_rm,
+#                "inseg_alim_05_2018" = lst.inseguranca$estrato_rm_sem_capital,
+#                "inseg_alim_06_2018" = lst.inseguranca$estrato_capital
+#                
+# )
+
+
+# Tabela a parte: share a alimentação no orçamento e share da alimentação no domicílio (Brasil + regiões)
+
+# tem um problema que a variável da renda ainda está em texto
+
+# Só precisamos fazer a nível Brasil
+
+
+# Tabela Final
+# write.xlsx(sheets, file = file.path(result_path, "pof_tabelas_2018.xlsx"))
+
+
+
+
+
+# Exportando as tableas ----
+
+# TEMOS QUE JUNTAR COM AS DE 2018
+
+# Feito isso vamos exportar as tabelas (de 2002 a 2018)
 
 leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
                        nivel_geografico = c('UF incluindo rural',
@@ -306,17 +422,24 @@ leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
                                             'Regiões da UF fora da RM SEM incluir rural',
                                             'Região Metropolitana (RM)',
                                             'RM exceto capital (Curitiba)',
-                                            'Capital (Curitiba)'))
-
-lst.tab$estrato_uf_com_rural
-lst.perc$estrato_uf_com_rural
-lst.fora.dom$estrato_uf_com_rural
-lst.proc$estrato_uf_com_rural
-lst.kcal$estrato_uf_com_rural
-lst.reais.kcal$estrato_uf_com_rural
-
+                                            'Capital (Curitiba)'),
+                       unidade = c('Todas as unidades apresentadas correspondem a valores per capita calculados para o domicílio'))
 
 sheets <- list("leia_me" = leia.me,
+               
+               "desp_01_2002" = lst.years$y_2002$estrato_uf_com_rural, 
+               "desp_02_2002" = lst.years$y_2002$estrato_uf_sem_rural,
+               "desp_03_2002" = lst.years$y_2002$estrato_uf_sem_rm_sem_rural,
+               "desp_04_2002" = lst.years$y_2002$estrato_rm,
+               "desp_05_2002" = lst.years$y_2002$estrato_rm_sem_capital,
+               "desp_06_2002" = lst.years$y_2002$estrato_capital,
+               
+               "desp_01_2008" = lst.years$y_2008$estrato_uf_com_rural, 
+               "desp_02_2008" = lst.years$y_2008$estrato_uf_sem_rural,
+               "desp_03_2008" = lst.years$y_2008$estrato_uf_sem_rm_sem_rural,
+               "desp_04_2008" = lst.years$y_2008$estrato_rm,
+               "desp_05_2008" = lst.years$y_2008$estrato_rm_sem_capital,
+               "desp_06_2008" = lst.years$y_2008$estrato_capital,
                
                # Bloco 1: Despesas nos grandes grupos
                "desp_grupo_01_2018" = lst.tab$estrato_uf_com_rural, 
@@ -350,6 +473,14 @@ sheets <- list("leia_me" = leia.me,
                "desp_alim_tipo_proc_05_2018" = lst.proc$estrato_rm_sem_capital,
                "desp_alim_tipo_proc_06_2018" = lst.proc$estrato_capital,
                
+               # consumo em kg por tipo de alimento
+               "consumo_kg_01_2018" = lst.kg$estrato_uf_com_rural, 
+               "consumo_kg_02_2018" = lst.kg$estrato_uf_sem_rural,
+               "consumo_kg_03_2018" = lst.kg$estrato_uf_sem_rm_sem_rural,
+               "consumo_kg_04_2018" = lst.kg$estrato_rm,
+               "consumo_kg_05_2018" = lst.kg$estrato_rm_sem_capital,
+               "consumo_kg_06_2018" = lst.kg$estrato_capital,
+               
                
                # Bloco 5: share por tipo de processamento
                "consumo_perc_kcal_01_2018" = lst.kcal$estrato_uf_com_rural, 
@@ -377,51 +508,8 @@ sheets <- list("leia_me" = leia.me,
                "inseg_alim_05_2018" = lst.inseguranca$estrato_rm_sem_capital,
                "inseg_alim_06_2018" = lst.inseguranca$estrato_capital
                
-)
-
-
-# Tabela a parte: share a alimentação no orçamento e share da alimentação no domicílio (Brasil + regiões)
-
-# tem um problema que a variável da renda ainda está em texto
-
-# Só precisamos fazer a nível Brasil
-
-
-# Tabela Final
-write.xlsx(sheets, file = file.path(result_path, "pof_tabelas_2018.xlsx"))
-
-
-
-
-
-# Exportando as tableas ----
-
-# TEMOS QUE JUNTAR COM AS DE 2018
-
-# Feito isso vamos exportar as tabelas (de 2002 a 2018)
-
-leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
-                       nivel_geografico = c('UF incluindo rural',
-                                            'UF SEM incluir rural',
-                                            'Regiões da UF fora da RM SEM incluir rural',
-                                            'Região Metropolitana (RM)',
-                                            'RM exceto capital (Curitiba)',
-                                            'Capital (Curitiba)'))
-
-sheets <- list("leia_me" = leia.me,
-               "desp_01_2002" = lst.years$y_2002$estrato_uf_com_rural, 
-               "desp_02_2002" = lst.years$y_2002$estrato_uf_sem_rural,
-               "desp_03_2002" = lst.years$y_2002$estrato_uf_sem_rm_sem_rural,
-               "desp_04_2002" = lst.years$y_2002$estrato_rm,
-               "desp_05_2002" = lst.years$y_2002$estrato_rm_sem_capital,
-               "desp_06_2002" = lst.years$y_2002$estrato_capital,
                
-               "desp_01_2008" = lst.years$y_2008$estrato_uf_com_rural, 
-               "desp_02_2008" = lst.years$y_2008$estrato_uf_sem_rural,
-               "desp_03_2008" = lst.years$y_2008$estrato_uf_sem_rm_sem_rural,
-               "desp_04_2008" = lst.years$y_2008$estrato_rm,
-               "desp_05_2008" = lst.years$y_2008$estrato_rm_sem_capital,
-               "desp_06_2008" = lst.years$y_2008$estrato_capital
+               
 )
 
 

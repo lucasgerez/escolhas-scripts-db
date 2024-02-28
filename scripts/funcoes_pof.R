@@ -234,12 +234,27 @@ f_alimentos_kg_2018 <- function(df, percentis) {
   # Vamos substituir os missings por zero
   df$variables[is.na(df$variables)] <- 0
   
-  # Bloco 1: cálculo do valor despendido
+  
+  # Bloco 1: consumo de alimentos em kg
   df <- df %>%
-    group_by(decis) %>% # {{percentis}} # aqui o grupo não será decil, será por grupo de consumo
-    summarise(consumo_kg = 365*survey_mean( pc_consumo_gramas,  na.rm = TRUE)/10^3) %>%
+    summarise(careais = (365/10^3)*survey_mean(  pc_consumo_gr_dom_cereais,  na.rm = TRUE),
+              farinhas = (365/10^3)*survey_mean( pc_consumo_gr_dom_farinhas_e_massas,  na.rm = TRUE),
+              tuberculos = (365/10^3)*survey_mean( pc_consumo_gr_dom_tuberculos_raizes,  na.rm = TRUE),
+              acucares = (365/10^3)*survey_mean( pc_consumo_gr_dom_acucares_e_derivados,  na.rm = TRUE),
+              verduras = (365/10^3)*survey_mean( pc_consumo_gr_dom_legumes_e_verduras,  na.rm = TRUE),
+              frutas = (365/10^3)*survey_mean( pc_consumo_gr_dom_frutas,  na.rm = TRUE),
+              carnes_pescados = (365/10^3)*survey_mean( pc_consumo_gr_dom_carnes_e_pescados,  na.rm = TRUE),
+              aves_ovos = (365/10^3)*survey_mean( pc_consumo_gr_dom_aves_e_ovos,  na.rm = TRUE),
+              leites_derivados = (365/10^3)*survey_mean( pc_consumo_gr_dom_leites_e_derivados,  na.rm = TRUE),
+              panificados = (365/10^3)*survey_mean( pc_consumo_gr_dom_panificados,  na.rm = TRUE),
+              oleos_gorduras = (365/10^3)*survey_mean( pc_consumo_gr_dom_oleos_e_gorduras,  na.rm = TRUE),
+              bebidas_infusoes = (365/10^3)*survey_mean( pc_consumo_gr_dom_bebidas_e_infusoes,  na.rm = TRUE),
+              elatados = (365/10^3)*survey_mean( pc_consumo_gr_dom_enlatados,  na.rm = TRUE),
+              sal = (365/10^3)*survey_mean( pc_consumo_gr_dom_sal,  na.rm = TRUE),
+              preparados = (365/10^3)*survey_mean( pc_consumo_gr_dom_alimentos_preparados,  na.rm = TRUE)) %>%
     select(-(ends_with("_se"))) %>%
     as.data.frame()
+  
   
   # Formato final 
   df_t <- t(df)
@@ -253,26 +268,13 @@ f_alimentos_kg_2018 <- function(df, percentis) {
   percentage_df <- as.data.frame(apply(df_t, 1, function(col) col / col_sums )) # * 100
   percentage_df <- round(percentage_df,2)
   
+  df_export <- cbind(df_t, percentage_df)
   
-  if (ncol(percentage_df) == 1) {
-    
-    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
-    colnames(percentage_df) <- c('grupo', 'Total')
-    
-  } else {
-    
-    # Aqui temos que transpor antes
-    percentage_df <- t(percentage_df)
-    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
-    colnames(percentage_df) <- c('grupo', 1:(ncol(percentage_df)-1))
-    
-  }
+  names(df_export) <- c('Consumo kg por ano', '% do total')
   
-  
-  return(percentage_df)
+  return(df_export)
   
 }
-
 
 
 f_tipo_process_2018 <- function(df, percentis) {
