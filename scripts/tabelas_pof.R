@@ -164,6 +164,7 @@ lst.fora.dom    <- list()
 lst.proc        <- list()
 lst.kcal        <- list()
 lst.reais.kcal  <- list()
+lst.kg          <- list()
 lst.inseguranca <- list()
 
 for (d in dimensoes) {
