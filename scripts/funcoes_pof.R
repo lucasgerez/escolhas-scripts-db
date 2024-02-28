@@ -1,8 +1,3 @@
-# do-file 2
-# Ricardo Campante C. Vale
-# Criando a função para extrair totais, médias e percentuais médios de consumo por
-# decis de estrato específico
-# 30 de outubro de 2023 (YYYYMMDD = 20231030)
 
 # preambulo -------------------------------------------
 # rm(list = ls())
@@ -176,6 +171,7 @@ f_alimentos_no_dom_2018 <- function(df, percentis) {
   
 }
 
+
 f_alimentos_fora_dom_2018 <- function(df, percentis) {
   
   # Vamos substituir os missings por zero
@@ -229,6 +225,55 @@ f_alimentos_fora_dom_2018 <- function(df, percentis) {
   return(percentage_df)
   
 }
+
+
+
+# FALTA ATUALIZAR ESSA FUNÇÃO ---------------------------------------------
+f_alimentos_kg_2018 <- function(df, percentis) {
+  
+  # Vamos substituir os missings por zero
+  df$variables[is.na(df$variables)] <- 0
+  
+  # Bloco 1: cálculo do valor despendido
+  df <- df %>%
+    group_by(decis) %>% # {{percentis}} # aqui o grupo não será decil, será por grupo de consumo
+    summarise(consumo_kg = 365*survey_mean( pc_consumo_gramas,  na.rm = TRUE)/10^3) %>%
+    select(-(ends_with("_se"))) %>%
+    as.data.frame()
+  
+  # Formato final 
+  df_t <- t(df)
+  df_t <- df_t[-1,] %>% as.data.frame()
+  colnames(df_t) <- c(1:ncol(df_t))
+  
+  # Vamos então fazer a conta do percentual do gasto com cada grupo de alimento
+  col_sums <- colSums(df_t)
+  
+  # Create a new data frame for percentages
+  percentage_df <- as.data.frame(apply(df_t, 1, function(col) col / col_sums )) # * 100
+  percentage_df <- round(percentage_df,2)
+  
+  
+  if (ncol(percentage_df) == 1) {
+    
+    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
+    colnames(percentage_df) <- c('grupo', 'Total')
+    
+  } else {
+    
+    # Aqui temos que transpor antes
+    percentage_df <- t(percentage_df)
+    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
+    colnames(percentage_df) <- c('grupo', 1:(ncol(percentage_df)-1))
+    
+  }
+  
+  
+  return(percentage_df)
+  
+}
+
+
 
 f_tipo_process_2018 <- function(df, percentis) {
   
