@@ -270,6 +270,8 @@ f_alimentos_kg_2018 <- function(df, percentis) {
   
   df_export <- cbind(df_t, percentage_df)
   
+  df_export[,1] <- round(df_export[,1], 2)
+  
   names(df_export) <- c('Consumo kg por ano', '% do total')
   
   return(df_export)
@@ -445,6 +447,95 @@ f_inseguranca_2018 <- function(df) {
 }
 
 
+
+f_gasto_alimentacao_estrato_2018 <- function(df, estrato, region_name, year) {
+  
+  df <- filter(df, ESTRATO_POF %in% estrato)
+  
+  df_tab <- df %>%
+    summarise(renda_dom_pc_disp = survey_mean( PC_RENDA_DISP,  na.rm = TRUE),
+              despesa_alimentos = survey_mean( pc_desp_nivel3_Alimentacao,  na.rm = TRUE),
+              despesa_alimentos_no_dom = survey_mean( pc_desp_nivel4_Alimentacao_no_dom,  na.rm = TRUE),
+              despesa_alimentos_fora_dom = survey_mean( pc_desp_nivel4_Alimentacao_fora_dom,  na.rm = TRUE),
+              despesa_habitacao = survey_mean( pc_desp_nivel3_Habitacao,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( pc_desp_nivel3_Vestuario,  na.rm = TRUE),
+              despesa_transporte = survey_mean( pc_desp_nivel3_Transporte,  na.rm = TRUE),
+              despesa_higiene = survey_mean( pc_desp_nivel3_Higiene,  na.rm = TRUE),
+              despesa_saude = survey_mean( pc_desp_nivel3_Saude,  na.rm = TRUE),
+              despesa_educacao = survey_mean( pc_desp_nivel3_Educacao,  na.rm = TRUE),
+              despesa_cultura = survey_mean( pc_desp_nivel3_Lazer_e_cult,  na.rm = TRUE),
+              despesa_fumo = survey_mean( pc_desp_nivel3_Fumo,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( pc_desp_nivel3_Serv_pessoais,  na.rm = TRUE),
+              despesa_diversas = survey_mean( pc_desp_nivel3_diversos,  na.rm = TRUE)
+    ) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+             despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+             despesa_serv_pessoais + despesa_diversas) %>%
+    mutate(perc_aliment_orcamento = round(100*despesa_alimentos/despesa_consumo),
+           perc_aliment_no_domicilio = round(100*despesa_alimentos_no_dom/despesa_alimentos)) %>%
+    mutate(unidade_analise = region_name, pof_year = year) %>%
+    select(unidade_analise, pof_year, perc_aliment_orcamento, perc_aliment_no_domicilio) %>%
+    
+    as.data.frame()
+  
+  return(df_tab)
+  
+  
+  
+}
+
+
+f_gasto_alimentacao_br_2018 <- function(pof_br, region_name) {
+  
+  
+  aux <- pof_br %>% 
+    group_by(ESTRATO_POF) %>% 
+    summarise(n = n()) %>% 
+    filter(n > 1 )
+  
+  cat('\nData cleanning for the sample')
+  pof_br <- pof_br %>% filter(ESTRATO_POF %in% aux$ESTRATO_POF )
+  
+  cat('\nDefining as survey design')
+  pof_svy <- as_survey(svydesign(ids = ~COD_UPA, 
+                                 strata = ~ESTRATO_POF,
+                                 weights = ~peso_final_fam, 
+                                 data = pof_br, 
+                                 check.strata = TRUE))
+  
+  df_tab <- pof_svy %>%
+    summarise(renda_dom_pc_disp = survey_mean( PC_RENDA_DISP,  na.rm = TRUE),
+              despesa_alimentos = survey_mean( pc_desp_nivel3_Alimentacao,  na.rm = TRUE),
+              despesa_alimentos_no_dom = survey_mean( pc_desp_nivel4_Alimentacao_no_dom,  na.rm = TRUE),
+              despesa_alimentos_fora_dom = survey_mean( pc_desp_nivel4_Alimentacao_fora_dom,  na.rm = TRUE),
+              despesa_habitacao = survey_mean( pc_desp_nivel3_Habitacao,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( pc_desp_nivel3_Vestuario,  na.rm = TRUE),
+              despesa_transporte = survey_mean( pc_desp_nivel3_Transporte,  na.rm = TRUE),
+              despesa_higiene = survey_mean( pc_desp_nivel3_Higiene,  na.rm = TRUE),
+              despesa_saude = survey_mean( pc_desp_nivel3_Saude,  na.rm = TRUE),
+              despesa_educacao = survey_mean( pc_desp_nivel3_Educacao,  na.rm = TRUE),
+              despesa_cultura = survey_mean( pc_desp_nivel3_Lazer_e_cult,  na.rm = TRUE),
+              despesa_fumo = survey_mean( pc_desp_nivel3_Fumo,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( pc_desp_nivel3_Serv_pessoais,  na.rm = TRUE),
+              despesa_diversas = survey_mean( pc_desp_nivel3_diversos,  na.rm = TRUE)
+    ) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+             despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+             despesa_serv_pessoais + despesa_diversas) %>%
+    mutate(perc_aliment_orcamento = round(100*despesa_alimentos/despesa_consumo),
+           perc_aliment_no_domicilio = round(100*despesa_alimentos_no_dom/despesa_alimentos)) %>%
+    mutate(unidade_analise = region_name, pof_year = 2018) %>%
+    select(unidade_analise, pof_year, perc_aliment_orcamento, perc_aliment_no_domicilio) %>%
+    
+    as.data.frame()
+  
+  return(df_tab)
+  
+  
+  
+}
+
+
 # Função para a POF de 2002 a 2008
 
 cat('\n\n Getting the data .... ')
@@ -551,20 +642,22 @@ f_gasto_alimentacao_estrato_2002_2008 <- function(df, estrato, region_name, year
   
 }
 
-# EM CONSTRUÇÃO ......
 # mesma coisa do estrato, mas aqui para o Brasil
 f_gasto_alimentacao_br_2002_2008 <- function(pof_br, region_name, year) {
+  
+  cat('\nFiltering the year')
   
   pof_br <- pof_br %>% filter(ano == year)
   
   aux <- pof_br %>% 
-    group_by(ESTRATO_POF) %>% 
+    group_by(estrato_pof) %>% 
     summarise(n = n()) %>% 
     filter(n > 1 )
   
-  pof_br <- pof_br %>% filter(ESTRATO_POF %in% aux$ESTRATO_POF )
+  cat('\nData cleanning for the sample')
+  pof_br <- pof_br %>% filter(estrato_pof %in% aux$estrato_pof )
   
-  
+  cat('\nDefining as survey design')
   pof_svy <- as_survey(svydesign(ids = ~COD_UPA, 
                                  strata = ~estrato_pof,
                                  weights = ~peso_fam, 

@@ -145,9 +145,7 @@ aux2 <- f_gasto_alimentacao_br_2002_2008(pof_br = pof_res, region_name = 'Brasil
 # temos que calcular isso para 2018 tbm
 
 # isso vai se juntar com 
-tabela_orcamento_alim
-
-
+tabela_orcamento_alim <- rbind(tabela_orcamento_alim, aux1, aux2)
 
 
 ## POF 2018 ----
@@ -165,6 +163,7 @@ lst.kcal        <- list()
 lst.reais.kcal  <- list()
 lst.kg          <- list()
 lst.inseguranca <- list()
+lst.food.expend <- list()
 
 for (d in dimensoes) {
   
@@ -290,8 +289,14 @@ for (d in dimensoes) {
   # Kcal consumido
   t7 <- f_alimentos_kg_2018(pof_svy)
   
-  # Tabela 5
+  # Tabela 7
   lst.kg[[match(d, dimensoes)]] <- t7 
+  
+  
+  # Gastos com alimentação em relação ao orçamento
+  t8 <- f_gasto_alimentacao_estrato_2018(df = pof_svy, estrato = get(d), region_name = d, year = 2018)
+  
+  lst.food.expend[[match(d, dimensoes)]] <- t8
   
   
   
@@ -306,6 +311,19 @@ names(lst.kcal)        <- dimensoes
 names(lst.reais.kcal)  <- dimensoes
 names(lst.inseguranca) <- dimensoes
 names(lst.kg)          <- dimensoes
+
+
+# Acho que faz sentido reorganizar essa tabela na hora de exportar
+tabela_orcamento_alim2018 <- bind_rows(lst.food.expend)
+
+
+# Tabela do Brasil
+aux3 <- f_gasto_alimentacao_br_2018(pof_br = pof_2018, region_name = 'Brasil')
+
+# Tabela consolidada de alimentos
+tabela_orcamento_alim <- rbind(tabela_orcamento_alim, tabela_orcamento_alim2018, aux3)
+
+tabela_orcamento_alim <- tabela_orcamento_alim %>% arrange(unidade_analise, pof_year)
 
 
 # leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
@@ -425,7 +443,11 @@ leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
                                             'Capital (Curitiba)'),
                        unidade = c('Todas as unidades apresentadas correspondem a valores per capita calculados para o domicílio'))
 
+#### tabela_orcamento_alim precisar ser exportada! 
+
 sheets <- list("leia_me" = leia.me,
+               
+               "tabela_orcamento_alim" = tabela_orcamento_alim,
                
                "desp_01_2002" = lst.years$y_2002$estrato_uf_com_rural, 
                "desp_02_2002" = lst.years$y_2002$estrato_uf_sem_rural,
