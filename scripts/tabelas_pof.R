@@ -155,15 +155,15 @@ pof_2018 <- readRDS( file.path( git_path, "data/pof_fam_wide_2018.RDS") )
 
 
 # Vamos fazer as listas: 
-lst.tab         <- list()
-lst.perc        <- list()
-lst.fora.dom    <- list()
-lst.proc        <- list()
-lst.kcal        <- list()
-lst.reais.kcal  <- list()
+# lst.tab         <- list()
+# lst.perc        <- list()
+# lst.fora.dom    <- list()
+# lst.proc        <- list()
+# lst.kcal        <- list()
+# lst.reais.kcal  <- list()
 lst.kg          <- list()
-lst.inseguranca <- list()
-lst.food.expend <- list()
+# lst.inseguranca <- list()
+# lst.food.expend <- list()
 
 for (d in dimensoes) {
   
@@ -210,75 +210,75 @@ for (d in dimensoes) {
   
   pof_svy$variables$um <- 999 # para o total
   
-  cat('\n     Tabela 1 - grandes grupos', paste(Sys.time()))
-  
-  # Bloco de gastos por grandes grupos
-  t1 <- f_medias_2018(pof_svy, decis)
-  t1b <- f_medias_2018(pof_svy, um)
-  names(t1b)[1] <- "decis"
-  t1b$decis <- 'Total'
-  t1 <- rbind(t1, t1b) 
-  t1 <- left_join(tab_renda, t1, by = 'decis') 
-  
-  # Tabela 1
-  lst.tab[[match(d, dimensoes)]] <- t1 
-  
-  
-  cat('\n     Tabela 2 - % gasto em alimentos', paste(Sys.time()))
-  
-  # Percentual gasto em tipos de alimentos
-  t2  <- f_alimentos_no_dom_2018(pof_svy, decis)
-  t2b <- f_alimentos_no_dom_2018(pof_svy, um) #  %>% t()
-  t2  <- left_join(t2, t2b, by = 'grupo' )
-  
-  # Tabela 2
-  lst.perc[[match(d, dimensoes)]] <- t2 
-  
-  
-  cat('\n     Tabela 3 - % gasto em alimentos fora do dom', paste(Sys.time()))
-  
-  # Percentual gasto em tipos de alimentos fora do dom
-  t3  <- f_alimentos_fora_dom_2018(pof_svy, decis)
-  t3b <- f_alimentos_fora_dom_2018(pof_svy, um) 
-  t3  <- left_join(t3, t3b, by = 'grupo' )
-  
-  # Tabela 3
-  lst.fora.dom[[match(d, dimensoes)]] <- t3 
-  
-  
-  cat('\n     Tabela 4 - % gasto por tipo de processamento', paste(Sys.time()))
-  
-  # Percentual gasto por tipo de processamento
-  t4 <- f_tipo_process_2018(pof_svy, decis)
-  t4b <- f_tipo_process_2018(pof_svy, um) 
-  t4  <- left_join(t4, t4b, by = 'grupo' )
-  
-  # Tabela 4
-  lst.proc[[match(d, dimensoes)]] <- t4 
-  
-  
-  cat('\n     Tabela 5 - Kcal consumido', paste(Sys.time()))
-  
-  # Kcal consumido
-  t5 <- f_consumo_kcal_2018(pof_svy, decis)
-  t5b <- f_consumo_kcal_2018(pof_svy, um) 
-  t5  <- left_join(t5, t5b, by = 'grupo' )
-  
-  # Tabela 5
-  lst.kcal[[match(d, dimensoes)]] <- t5 
-  
-  t6 <- round(t4[-1]/t5[-1],2)
-  t6 <- cbind(t4[,1], t6)
-  
-  cat('\n     Tabela 6 - R$/Kcal consumido', paste(Sys.time()))
-  
-  # Tabela 6: R$/Kcal consumido
-  lst.reais.kcal[[match(d, dimensoes)]] <- t6 
-  
-  
-  # Tabela 7: Insegurança alimentar e intersecções
-  lst.inseguranca[[match(d, dimensoes)]] <- f_inseguranca_2018(pof_svy)
-  
+  # cat('\n     Tabela 1 - grandes grupos', paste(Sys.time()))
+  # 
+  # # Bloco de gastos por grandes grupos
+  # t1 <- f_medias_2018(pof_svy, decis)
+  # t1b <- f_medias_2018(pof_svy, um)
+  # names(t1b)[1] <- "decis"
+  # t1b$decis <- 'Total'
+  # t1 <- rbind(t1, t1b) 
+  # t1 <- left_join(tab_renda, t1, by = 'decis') 
+  # 
+  # # Tabela 1
+  # lst.tab[[match(d, dimensoes)]] <- t1 
+  # 
+  # 
+  # cat('\n     Tabela 2 - % gasto em alimentos', paste(Sys.time()))
+  # 
+  # # Percentual gasto em tipos de alimentos
+  # t2  <- f_alimentos_no_dom_2018(pof_svy, decis)
+  # t2b <- f_alimentos_no_dom_2018(pof_svy, um) #  %>% t()
+  # t2  <- left_join(t2, t2b, by = 'grupo' )
+  # 
+  # # Tabela 2
+  # lst.perc[[match(d, dimensoes)]] <- t2 
+  # 
+  # 
+  # cat('\n     Tabela 3 - % gasto em alimentos fora do dom', paste(Sys.time()))
+  # 
+  # # Percentual gasto em tipos de alimentos fora do dom
+  # t3  <- f_alimentos_fora_dom_2018(pof_svy, decis)
+  # t3b <- f_alimentos_fora_dom_2018(pof_svy, um) 
+  # t3  <- left_join(t3, t3b, by = 'grupo' )
+  # 
+  # # Tabela 3
+  # lst.fora.dom[[match(d, dimensoes)]] <- t3 
+  # 
+  # 
+  # cat('\n     Tabela 4 - % gasto por tipo de processamento', paste(Sys.time()))
+  # 
+  # # Percentual gasto por tipo de processamento
+  # t4 <- f_tipo_process_2018(pof_svy, decis)
+  # t4b <- f_tipo_process_2018(pof_svy, um) 
+  # t4  <- left_join(t4, t4b, by = 'grupo' )
+  # 
+  # # Tabela 4
+  # lst.proc[[match(d, dimensoes)]] <- t4 
+  # 
+  # 
+  # cat('\n     Tabela 5 - Kcal consumido', paste(Sys.time()))
+  # 
+  # # Kcal consumido
+  # t5 <- f_consumo_kcal_2018(pof_svy, decis)
+  # t5b <- f_consumo_kcal_2018(pof_svy, um) 
+  # t5  <- left_join(t5, t5b, by = 'grupo' )
+  # 
+  # # Tabela 5
+  # lst.kcal[[match(d, dimensoes)]] <- t5 
+  # 
+  # t6 <- round(t4[-1]/t5[-1],2)
+  # t6 <- cbind(t4[,1], t6)
+  # 
+  # cat('\n     Tabela 6 - R$/Kcal consumido', paste(Sys.time()))
+  # 
+  # # Tabela 6: R$/Kcal consumido
+  # lst.reais.kcal[[match(d, dimensoes)]] <- t6 
+  # 
+  # 
+  # # Tabela 7: Insegurança alimentar e intersecções
+  # lst.inseguranca[[match(d, dimensoes)]] <- f_inseguranca_2018(pof_svy)
+  # 
   
   ## Kg ----
   
@@ -289,15 +289,19 @@ for (d in dimensoes) {
   # Kcal consumido
   t7 <- f_alimentos_kg_2018(pof_svy)
   
+  t7$Grupos <- rownames(t7)
+  
+  t7 <- t7 %>% select(Grupos, `Consumo kg por ano`, `% do total`)
+  
   # Tabela 7
   lst.kg[[match(d, dimensoes)]] <- t7 
   
   
-  # Gastos com alimentação em relação ao orçamento
-  t8 <- f_gasto_alimentacao_estrato_2018(df = pof_svy, estrato = get(d), region_name = d, year = 2018)
-  
-  lst.food.expend[[match(d, dimensoes)]] <- t8
-  
+  # # Gastos com alimentação em relação ao orçamento
+  # t8 <- f_gasto_alimentacao_estrato_2018(df = pof_svy, estrato = get(d), region_name = d, year = 2018)
+  # 
+  # lst.food.expend[[match(d, dimensoes)]] <- t8
+  # 
   
   
 }
@@ -324,108 +328,6 @@ aux3 <- f_gasto_alimentacao_br_2018(pof_br = pof_2018, region_name = 'Brasil')
 tabela_orcamento_alim <- rbind(tabela_orcamento_alim, tabela_orcamento_alim2018, aux3)
 
 tabela_orcamento_alim <- tabela_orcamento_alim %>% arrange(unidade_analise, pof_year)
-
-
-# leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
-#                        nivel_geografico = c('UF incluindo rural',
-#                                             'UF SEM incluir rural',
-#                                             'Regiões da UF fora da RM SEM incluir rural',
-#                                             'Região Metropolitana (RM)',
-#                                             'RM exceto capital (Curitiba)',
-#                                             'Capital (Curitiba)'))
-# 
-# lst.tab$estrato_uf_com_rural
-# lst.perc$estrato_uf_com_rural
-# lst.fora.dom$estrato_uf_com_rural
-# lst.proc$estrato_uf_com_rural
-# lst.kcal$estrato_uf_com_rural
-# lst.reais.kcal$estrato_uf_com_rural
-# 
-# 
-# sheets <- list("leia_me" = leia.me,
-#                
-#                # Bloco 1: Despesas nos grandes grupos
-#                "desp_grupo_01_2018" = lst.tab$estrato_uf_com_rural, 
-#                "desp_grupo_02_2018" = lst.tab$estrato_uf_sem_rural,
-#                "desp_grupo_03_2018" = lst.tab$estrato_uf_sem_rm_sem_rural,
-#                "desp_grupo_04_2018" = lst.tab$estrato_rm,
-#                "desp_grupo_05_2018" = lst.tab$estrato_rm_sem_capital,
-#                "desp_grupo_06_2018" = lst.tab$estrato_capital,
-#                
-#                # Bloco 2: share por tipo de alimento
-#                "desp_alim_dom_01_2018" = as.data.frame(lst.perc$estrato_uf_com_rural), 
-#                "desp_alim_dom_02_2018" = lst.perc$estrato_uf_sem_rural,
-#                "desp_alim_dom_03_2018" = lst.perc$estrato_uf_sem_rm_sem_rural,
-#                "desp_alim_dom_04_2018" = lst.perc$estrato_rm,
-#                "desp_alim_dom_05_2018" = lst.perc$estrato_rm_sem_capital,
-#                "desp_alim_dom_06_2018" = lst.perc$estrato_capital,
-#                
-#                # Bloco 3: share por tipo de alimento FORA do domicilio
-#                "desp_alim_fora_dom_01_2018" = lst.fora.dom$estrato_uf_com_rural, 
-#                "desp_alim_fora_dom_02_2018" = lst.fora.dom$estrato_uf_sem_rural,
-#                "desp_alim_fora_dom_03_2018" = lst.fora.dom$estrato_uf_sem_rm_sem_rural,
-#                "desp_alim_fora_dom_04_2018" = lst.fora.dom$estrato_rm,
-#                "desp_alim_fora_dom_05_2018" = lst.fora.dom$estrato_rm_sem_capital,
-#                "desp_alim_fora_dom_06_2018" = lst.fora.dom$estrato_capital,
-#                
-#                # Bloco 4: share por tipo de processamento
-#                "desp_alim_tipo_proc_01_2018" = lst.proc$estrato_uf_com_rural, 
-#                "desp_alim_tipo_proc_02_2018" = lst.proc$estrato_uf_sem_rural,
-#                "desp_alim_tipo_proc_03_2018" = lst.proc$estrato_uf_sem_rm_sem_rural,
-#                "desp_alim_tipo_proc_04_2018" = lst.proc$estrato_rm,
-#                "desp_alim_tipo_proc_05_2018" = lst.proc$estrato_rm_sem_capital,
-#                "desp_alim_tipo_proc_06_2018" = lst.proc$estrato_capital,
-#                
-#                # consumo em kg por tipo de alimento
-#                "consumo_kg_01_2018" = lst.kg$estrato_uf_com_rural, 
-#                "consumo_kg_02_2018" = lst.kg$estrato_uf_sem_rural,
-#                "consumo_kg_03_2018" = lst.kg$estrato_uf_sem_rm_sem_rural,
-#                "consumo_kg_04_2018" = lst.kg$estrato_rm,
-#                "consumo_kg_05_2018" = lst.kg$estrato_rm_sem_capital,
-#                "consumo_kg_06_2018" = lst.kg$estrato_capital,
-#                
-#                
-#                # Bloco 5: share por tipo de processamento
-#                "consumo_perc_kcal_01_2018" = lst.kcal$estrato_uf_com_rural, 
-#                "consumo_perc_kcal_02_2018" = lst.kcal$estrato_uf_sem_rural,
-#                "consumo_perc_kcal_03_2018" = lst.kcal$estrato_uf_sem_rm_sem_rural,
-#                "consumo_perc_kcal_04_2018" = lst.kcal$estrato_rm,
-#                "consumo_perc_kcal_05_2018" = lst.kcal$estrato_rm_sem_capital,
-#                "consumo_perc_kcal_06_2018" = lst.kcal$estrato_capital,
-#                
-#                
-#                # Bloco 6: share por tipo de processamento
-#                "reais_por_kcal_01_2018" = lst.reais.kcal$estrato_uf_com_rural, 
-#                "reais_por_kcal_02_2018" = lst.reais.kcal$estrato_uf_sem_rural,
-#                "reais_por_kcal_03_2018" = lst.reais.kcal$estrato_uf_sem_rm_sem_rural,
-#                "reais_por_kcal_04_2018" = lst.reais.kcal$estrato_rm,
-#                "reais_por_kcal_05_2018" = lst.reais.kcal$estrato_rm_sem_capital,
-#                "reais_por_kcal_06_2018" = lst.reais.kcal$estrato_capital,
-#                
-#                
-#                # Bloco 7: insegurança alimentar
-#                "inseg_alim_01_2018" = lst.inseguranca$estrato_uf_com_rural, 
-#                "inseg_alim_02_2018" = lst.inseguranca$estrato_uf_sem_rural,
-#                "inseg_alim_03_2018" = lst.inseguranca$estrato_uf_sem_rm_sem_rural,
-#                "inseg_alim_04_2018" = lst.inseguranca$estrato_rm,
-#                "inseg_alim_05_2018" = lst.inseguranca$estrato_rm_sem_capital,
-#                "inseg_alim_06_2018" = lst.inseguranca$estrato_capital
-#                
-# )
-
-
-# Tabela a parte: share a alimentação no orçamento e share da alimentação no domicílio (Brasil + regiões)
-
-# tem um problema que a variável da renda ainda está em texto
-
-# Só precisamos fazer a nível Brasil
-
-
-# Tabela Final
-# write.xlsx(sheets, file = file.path(result_path, "pof_tabelas_2018.xlsx"))
-
-
-
 
 
 # Exportando as tableas ----
