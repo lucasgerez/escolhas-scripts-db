@@ -408,59 +408,65 @@ consumo_kg_grupos <- CONSUMO_ALIMENTAR %>%
     Descricao_5=="Panificados" ~ 14,
     Descricao_5=="Óleos e gorduras" ~ 15,
     Descricao_5=="Outros" ~ 16
-  )) 
-
-
-grupo_alim_tipo = factor(grupo_alim_tipo, levels = 1:16, labels = c('cereais','tuberculos_raizes','alimentos_preparados',
-                                                                    'farinhas_e_massas','bebidas_e_infusoes','legumes_e_verduras',
-                                                                    'sal','frutas','acucares_e_derivados',
-                                                                    'carnes_e_pescados','enlatados','aves_e_ovos',
-                                                                    'leites_e_derivados','panificados','oleos_e_gorduras','outros') ),
-
-grupo_alim_fora_tipo = case_when(
-  Descricao_5=="Almoço e jantar" ~ 1,
-  Descricao_5=="Outras" ~ 2,
-  Descricao_5=="Sanduíches e salgados" ~ 3,
-  Descricao_5=="Alimentação light e diet" ~ 4,
-  Descricao_5=="Café, leite, café/leite e chocolate" ~ 5,
-  Descricao_5=="Refrigerantes e outras bebidas não alcoólicas" ~ 6,
-  Descricao_5=="Cervejas, chopes e outras bebidas alcoólicas" ~ 7,
-  Descricao_5=="Lanches" ~ 8
-), 
-grupo_alim_fora_tipo = factor(grupo_alim_fora_tipo, levels = 1:8, labels = c('almoco_e_jantar','outras','sanduiches_e_salgados',
-                                                                             'alimentacao_light_diet','cafe_leite_choco',
-                                                                             'refri_e_outras_nao_alcooicas', 
-                                                                             'cervejas_e_outras_alcoólicas','lanches')), 
-grupo_alim_tipo_process = factor(Grupo_Processado, levels = 1:4, labels = c('in_natura',
-                                                                            'ing_culinario',
-                                                                            'processado',
-                                                                            'ultraprocessado'))
+  )) %>% 
+  mutate(
+    
+    grupo_alim_tipo = factor(grupo_alim_tipo, levels = 1:16, labels = c('cereais','tuberculos_raizes','alimentos_preparados',
+                                                                        'farinhas_e_massas','bebidas_e_infusoes','legumes_e_verduras',
+                                                                        'sal','frutas','acucares_e_derivados',
+                                                                        'carnes_e_pescados','enlatados','aves_e_ovos',
+                                                                        'leites_e_derivados','panificados','oleos_e_gorduras','outros') )
+    
+  ) %>% 
+  mutate(
+    
+    grupo_alim_fora_tipo = case_when(
+      Descricao_5=="Almoço e jantar" ~ 1,
+      Descricao_5=="Outras" ~ 2,
+      Descricao_5=="Sanduíches e salgados" ~ 3,
+      Descricao_5=="Alimentação light e diet" ~ 4,
+      Descricao_5=="Café, leite, café/leite e chocolate" ~ 5,
+      Descricao_5=="Refrigerantes e outras bebidas não alcoólicas" ~ 6,
+      Descricao_5=="Cervejas, chopes e outras bebidas alcoólicas" ~ 7,
+      Descricao_5=="Lanches" ~ 8
+    ), 
+    grupo_alim_fora_tipo = factor(grupo_alim_fora_tipo, levels = 1:8, labels = c('almoco_e_jantar','outras','sanduiches_e_salgados',
+                                                                                 'alimentacao_light_diet','cafe_leite_choco',
+                                                                                 'refri_e_outras_nao_alcooicas', 
+                                                                                 'cervejas_e_outras_alcoólicas','lanches')), 
+    grupo_alim_tipo_process = factor(Grupo_Processado, levels = 1:4, labels = c('in_natura',
+                                                                                'ing_culinario',
+                                                                                'processado',
+                                                                                'ultraprocessado'))
+    
+  ) 
   
-  
+
+# Feito isso vamos calcular o consumo em kg para os grupos 
+
+consumo_kg_desc5 <- consumo_kg_grupos %>% 
   filter(!is.na(ENERGIA_KCAL)) %>%
-  group_by(across(all_of(c(var_dom))))%>%
-  summarise(consumo_kcal = sum(ENERGIA_KCAL, na.rm = TRUE),
-            consumo_kj = sum(ENERGIA_KJ, na.rm = TRUE),
-            consumo_gramas = sum(GRAMATURA1, na.rm = TRUE))  
-
-
-# Tipo de alimento dentro do dom
-desp.nivel.5.dentro.dom <- 
-  despesas_gerais %>%
-  filter(!is.na(grupo_alim_tipo)) %>%
   group_by(across(all_of(c(var_dom, 'grupo_alim_tipo'))))%>%
-  summarise(desp_grupo = sum(desp, na.rm = TRUE))  %>%
+  summarise(consumo_gramas = sum(GRAMATURA1, na.rm = TRUE)) %>%
   ungroup() %>% 
   pivot_wider(names_from = grupo_alim_tipo,
-              values_from = desp_grupo,
-              names_prefix = "desp_nivel5_dentro_dom_") %>%
-  rowwise() %>%
-  mutate(sum_desp_nivel5_dentro_dom = sum(c_across(starts_with("desp_nivel5_dentro_dom_")), na.rm = TRUE)); gc()
+              values_from = consumo_gramas,
+              names_prefix = "consumo_gr_dom_") %>%
+  rowwise() 
+  
 
+# Aqui temos a soma de gramas de alimentos processados
+consumo_kg_tipo_proces <- consumo_kg_grupos %>% 
+  filter(!is.na(ENERGIA_KCAL)) %>%
+  group_by(across(all_of(c(var_dom, 'grupo_alim_tipo_process'))))%>%
+  summarise(consumo_gramas = sum(GRAMATURA1, na.rm = TRUE)) %>%
+  ungroup() %>% 
+  pivot_wider(names_from = grupo_alim_tipo_process,
+              values_from = consumo_gramas,
+              names_prefix = "consumo_gr_tipo_proc_") %>%
+  rowwise() 
 
-
-
-
+# Aqui temos a soma de kcal de alimentos processados
 consumo.tipo.proc <-  
   CONSUMO_ALIMENTAR %>%
   filter(!is.na(Grupo_Processado)) %>%
@@ -482,7 +488,9 @@ consumo.tipo.proc <-
 
 pof_2018 <- pof_2018 %>% 
   full_join(consumo_nutrientes, by = var_dom) %>%
-  full_join(consumo.tipo.proc, by = var_dom)
+  full_join(consumo.tipo.proc, by = var_dom) %>% 
+  full_join(consumo_kg_desc5, by = var_dom) %>%
+  full_join(consumo_kg_tipo_proces, by = var_dom) 
 
 consumo_vars <- grep("^consumo_", names(pof_2018), value = TRUE)
 
