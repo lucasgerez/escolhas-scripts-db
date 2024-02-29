@@ -229,7 +229,7 @@ f_alimentos_fora_dom_2018 <- function(df, percentis) {
 
 
 # FALTA ATUALIZAR ESSA FUNÇÃO ---------------------------------------------
-f_alimentos_kg_2018 <- function(df, percentis) {
+f_alimentos_kg_2018 <- function(df) {
   
   # Vamos substituir os missings por zero
   df$variables[is.na(df$variables)] <- 0
@@ -257,8 +257,8 @@ f_alimentos_kg_2018 <- function(df, percentis) {
   
   
   # Formato final 
-  df_t <- t(df)
-  df_t <- df_t[-1,] %>% as.data.frame()
+  df_t <- t(df) %>% as.data.frame()
+  # df_t <- df_t[-1,] %>% as.data.frame()
   colnames(df_t) <- c(1:ncol(df_t))
   
   # Vamos então fazer a conta do percentual do gasto com cada grupo de alimento
@@ -445,7 +445,6 @@ f_inseguranca_2018 <- function(df) {
     left_join(df8, by = 'inseguranca_alimentar') 
   
 }
-
 
 
 f_gasto_alimentacao_estrato_2018 <- function(df, estrato, region_name, year) {

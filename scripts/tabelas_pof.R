@@ -155,15 +155,15 @@ pof_2018 <- readRDS( file.path( git_path, "data/pof_fam_wide_2018.RDS") )
 
 
 # Vamos fazer as listas: 
-# lst.tab         <- list()
-# lst.perc        <- list()
-# lst.fora.dom    <- list()
-# lst.proc        <- list()
-# lst.kcal        <- list()
-# lst.reais.kcal  <- list()
+lst.tab         <- list()
+lst.perc        <- list()
+lst.fora.dom    <- list()
+lst.proc        <- list()
+lst.kcal        <- list()
+lst.reais.kcal  <- list()
 lst.kg          <- list()
-# lst.inseguranca <- list()
-# lst.food.expend <- list()
+lst.inseguranca <- list()
+lst.food.expend <- list()
 
 for (d in dimensoes) {
   
@@ -210,75 +210,75 @@ for (d in dimensoes) {
   
   pof_svy$variables$um <- 999 # para o total
   
-  # cat('\n     Tabela 1 - grandes grupos', paste(Sys.time()))
-  # 
-  # # Bloco de gastos por grandes grupos
-  # t1 <- f_medias_2018(pof_svy, decis)
-  # t1b <- f_medias_2018(pof_svy, um)
-  # names(t1b)[1] <- "decis"
-  # t1b$decis <- 'Total'
-  # t1 <- rbind(t1, t1b) 
-  # t1 <- left_join(tab_renda, t1, by = 'decis') 
-  # 
-  # # Tabela 1
-  # lst.tab[[match(d, dimensoes)]] <- t1 
-  # 
-  # 
-  # cat('\n     Tabela 2 - % gasto em alimentos', paste(Sys.time()))
-  # 
-  # # Percentual gasto em tipos de alimentos
-  # t2  <- f_alimentos_no_dom_2018(pof_svy, decis)
-  # t2b <- f_alimentos_no_dom_2018(pof_svy, um) #  %>% t()
-  # t2  <- left_join(t2, t2b, by = 'grupo' )
-  # 
-  # # Tabela 2
-  # lst.perc[[match(d, dimensoes)]] <- t2 
-  # 
-  # 
-  # cat('\n     Tabela 3 - % gasto em alimentos fora do dom', paste(Sys.time()))
-  # 
-  # # Percentual gasto em tipos de alimentos fora do dom
-  # t3  <- f_alimentos_fora_dom_2018(pof_svy, decis)
-  # t3b <- f_alimentos_fora_dom_2018(pof_svy, um) 
-  # t3  <- left_join(t3, t3b, by = 'grupo' )
-  # 
-  # # Tabela 3
-  # lst.fora.dom[[match(d, dimensoes)]] <- t3 
-  # 
-  # 
-  # cat('\n     Tabela 4 - % gasto por tipo de processamento', paste(Sys.time()))
-  # 
-  # # Percentual gasto por tipo de processamento
-  # t4 <- f_tipo_process_2018(pof_svy, decis)
-  # t4b <- f_tipo_process_2018(pof_svy, um) 
-  # t4  <- left_join(t4, t4b, by = 'grupo' )
-  # 
-  # # Tabela 4
-  # lst.proc[[match(d, dimensoes)]] <- t4 
-  # 
-  # 
-  # cat('\n     Tabela 5 - Kcal consumido', paste(Sys.time()))
-  # 
-  # # Kcal consumido
-  # t5 <- f_consumo_kcal_2018(pof_svy, decis)
-  # t5b <- f_consumo_kcal_2018(pof_svy, um) 
-  # t5  <- left_join(t5, t5b, by = 'grupo' )
-  # 
-  # # Tabela 5
-  # lst.kcal[[match(d, dimensoes)]] <- t5 
-  # 
-  # t6 <- round(t4[-1]/t5[-1],2)
-  # t6 <- cbind(t4[,1], t6)
-  # 
-  # cat('\n     Tabela 6 - R$/Kcal consumido', paste(Sys.time()))
-  # 
-  # # Tabela 6: R$/Kcal consumido
-  # lst.reais.kcal[[match(d, dimensoes)]] <- t6 
-  # 
-  # 
-  # # Tabela 7: Insegurança alimentar e intersecções
-  # lst.inseguranca[[match(d, dimensoes)]] <- f_inseguranca_2018(pof_svy)
-  # 
+  cat('\n     Tabela 1 - grandes grupos', paste(Sys.time()))
+
+  # Bloco de gastos por grandes grupos
+  t1 <- f_medias_2018(pof_svy, decis)
+  t1b <- f_medias_2018(pof_svy, um)
+  names(t1b)[1] <- "decis"
+  t1b$decis <- 'Total'
+  t1 <- rbind(t1, t1b)
+  t1 <- left_join(tab_renda, t1, by = 'decis')
+
+  # Tabela 1
+  lst.tab[[match(d, dimensoes)]] <- t1
+
+
+  cat('\n     Tabela 2 - % gasto em alimentos', paste(Sys.time()))
+
+  # Percentual gasto em tipos de alimentos
+  t2  <- f_alimentos_no_dom_2018(pof_svy, decis)
+  t2b <- f_alimentos_no_dom_2018(pof_svy, um) #  %>% t()
+  t2  <- left_join(t2, t2b, by = 'grupo' )
+
+  # Tabela 2
+  lst.perc[[match(d, dimensoes)]] <- t2
+
+
+  cat('\n     Tabela 3 - % gasto em alimentos fora do dom', paste(Sys.time()))
+
+  # Percentual gasto em tipos de alimentos fora do dom
+  t3  <- f_alimentos_fora_dom_2018(pof_svy, decis)
+  t3b <- f_alimentos_fora_dom_2018(pof_svy, um)
+  t3  <- left_join(t3, t3b, by = 'grupo' )
+
+  # Tabela 3
+  lst.fora.dom[[match(d, dimensoes)]] <- t3
+
+
+  cat('\n     Tabela 4 - % gasto por tipo de processamento', paste(Sys.time()))
+
+  # Percentual gasto por tipo de processamento
+  t4 <- f_tipo_process_2018(pof_svy, decis)
+  t4b <- f_tipo_process_2018(pof_svy, um)
+  t4  <- left_join(t4, t4b, by = 'grupo' )
+
+  # Tabela 4
+  lst.proc[[match(d, dimensoes)]] <- t4
+
+
+  cat('\n     Tabela 5 - Kcal consumido', paste(Sys.time()))
+
+  # Kcal consumido
+  t5 <- f_consumo_kcal_2018(pof_svy, decis)
+  t5b <- f_consumo_kcal_2018(pof_svy, um)
+  t5  <- left_join(t5, t5b, by = 'grupo' )
+
+  # Tabela 5
+  lst.kcal[[match(d, dimensoes)]] <- t5
+
+  t6 <- round(t4[-1]/t5[-1],2)
+  t6 <- cbind(t4[,1], t6)
+
+  cat('\n     Tabela 6 - R$/Kcal consumido', paste(Sys.time()))
+
+  # Tabela 6: R$/Kcal consumido
+  lst.reais.kcal[[match(d, dimensoes)]] <- t6
+
+
+  # Tabela 7: Insegurança alimentar e intersecções
+  lst.inseguranca[[match(d, dimensoes)]] <- f_inseguranca_2018(pof_svy)
+
   
   ## Kg ----
   
@@ -438,6 +438,7 @@ sheets <- list("leia_me" = leia.me,
 
 
 write.xlsx(sheets, file = file.path(result_path, "curitiba_pof_tabelas.xlsx"))
+
 
 
 
