@@ -20,6 +20,7 @@ git_path <- 'C:/Users/user/Projetos_GIT/escolhas-scripts-db'
 # Vamos rodar as funções no Git
 source(file.path( git_path, "scripts/funcoes_pof.R" ), encoding = 'UTF-8')
 
+inicial <- Sys.time()
 
 # Estratos de Curitiba (comum em todos os anos)
 
@@ -297,11 +298,11 @@ for (d in dimensoes) {
   lst.kg[[match(d, dimensoes)]] <- t7 
   
   
-  # # Gastos com alimentação em relação ao orçamento
-  # t8 <- f_gasto_alimentacao_estrato_2018(df = pof_svy, estrato = get(d), region_name = d, year = 2018)
-  # 
-  # lst.food.expend[[match(d, dimensoes)]] <- t8
-  # 
+  # Gastos com alimentação em relação ao orçamento
+  t8 <- f_gasto_alimentacao_estrato_2018(df = pof_svy, estrato = get(d), region_name = d, year = 2018)
+
+  lst.food.expend[[match(d, dimensoes)]] <- t8
+
   
   
 }
@@ -328,6 +329,11 @@ aux3 <- f_gasto_alimentacao_br_2018(pof_br = pof_2018, region_name = 'Brasil')
 tabela_orcamento_alim <- rbind(tabela_orcamento_alim, tabela_orcamento_alim2018, aux3)
 
 tabela_orcamento_alim <- tabela_orcamento_alim %>% arrange(unidade_analise, pof_year)
+
+
+# Vamos fazer o de Insegurança alimentar para o Brasil para comparar
+
+inseg_br <- f_inseguranca_2018_br(pof_2018)
 
 
 # Exportando as tableas ----
@@ -430,7 +436,9 @@ sheets <- list("leia_me" = leia.me,
                "inseg_alim_03_2018" = lst.inseguranca$estrato_uf_sem_rm_sem_rural,
                "inseg_alim_04_2018" = lst.inseguranca$estrato_rm,
                "inseg_alim_05_2018" = lst.inseguranca$estrato_rm_sem_capital,
-               "inseg_alim_06_2018" = lst.inseguranca$estrato_capital
+               "inseg_alim_06_2018" = lst.inseguranca$estrato_capital,
+               
+               "inseg_alim_br_2018" = inseg_br
                
                
                
@@ -441,7 +449,7 @@ write.xlsx(sheets, file = file.path(result_path, "curitiba_pof_tabelas.xlsx"))
 
 
 
-
+final <- Sys.time()
 
 
 

@@ -379,8 +379,6 @@ f_consumo_kcal_2018 <- function(df, percentis) {
 
 f_inseguranca_2018 <- function(df) {
   
-  df = pof_svy
-  
   # Vamos substituir os missings por zero
   df$variables[is.na(df$variables)] <- 0
   
