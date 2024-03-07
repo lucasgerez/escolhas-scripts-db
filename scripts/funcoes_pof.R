@@ -227,8 +227,6 @@ f_alimentos_fora_dom_2018 <- function(df, percentis) {
 }
 
 
-
-# FALTA ATUALIZAR ESSA FUNÇÃO ---------------------------------------------
 f_alimentos_kg_2018 <- function(df) {
   
   # Vamos substituir os missings por zero
@@ -444,6 +442,88 @@ f_inseguranca_2018 <- function(df) {
   
 }
 
+f_inseguranca_2018_br <- function(pof_br) {
+  
+  aux <- pof_br %>% 
+    group_by(ESTRATO_POF) %>% 
+    summarise(n = n()) %>% 
+    filter(n > 1 )
+  
+  cat('\nData cleanning for the sample')
+  pof_br <- pof_br %>% filter(ESTRATO_POF %in% aux$ESTRATO_POF )
+  
+  cat('\nDefining as survey design')
+  df <- as_survey(svydesign( ids = ~COD_UPA, 
+                             strata = ~ESTRATO_POF,
+                             weights = ~peso_final_fam, 
+                             data = pof_br, 
+                             check.strata = TRUE))
+
+  
+  # Vamos substituir os missings por zero
+  df$variables[is.na(df$variables)] <- 0
+  
+  # Bloco 1 Insegurança Alimentar no estrato como um todo 
+  
+  # Bloco 1: 
+  df1 <- df %>%
+    group_by(inseguranca_alimentar) %>% 
+    summarise(pop_geral = survey_prop()) %>%
+    select(-(ends_with("_se"))) 
+  
+  df2 <- df %>%
+    filter(chefe_dom_over_65 == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_over_65 = survey_prop()) %>%
+    select(-(ends_with("_se"))) 
+  
+  df3 <- df %>%
+    filter(chefe_dom_analf == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_analf = survey_prop()) %>%
+    select(-(ends_with("_se"))) 
+  
+  df4 <- df %>%
+    filter(chefe_dom_EF == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_EF = survey_prop()) %>%
+    select(-(ends_with("_se"))) 
+  
+  df5 <- df %>%
+    filter(chefe_dom_EM == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_EM = survey_prop()) %>%
+    select(-(ends_with("_se"))) 
+  
+  df6 <- df %>%
+    filter(chefe_dom_mulher == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_mulher = survey_prop()) %>%
+    select(-(ends_with("_se")))
+  
+  df7 <- df %>%
+    filter(chefe_dom_negro == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_dom_negro = survey_prop()) %>%
+    select(-(ends_with("_se")))
+  
+  df8 <- df %>%
+    filter(chefe_dom_mulher == 1, chefe_dom_negro == 1, chefe_dom_EF == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_mulh_negra_EF = survey_prop()) %>%
+    select(-(ends_with("_se")))
+  
+  
+  df1 %>% 
+    left_join(df2, by = 'inseguranca_alimentar') %>%
+    left_join(df3, by = 'inseguranca_alimentar') %>%
+    left_join(df4, by = 'inseguranca_alimentar') %>%
+    left_join(df5, by = 'inseguranca_alimentar') %>%
+    left_join(df6, by = 'inseguranca_alimentar') %>%
+    left_join(df7, by = 'inseguranca_alimentar') %>% 
+    left_join(df8, by = 'inseguranca_alimentar') 
+  
+}
 
 f_gasto_alimentacao_estrato_2018 <- function(df, estrato, region_name, year) {
   
