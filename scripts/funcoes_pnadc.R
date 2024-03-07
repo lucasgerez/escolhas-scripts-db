@@ -136,7 +136,8 @@ trat_pnad <- function(ano, visita) {
         atividade_estabelecimentos %in% c( 'Comércio, reparação de veículos automotores e motocicletas' ) ~ 'Comércio',
       atividade_estabelecimentos %in% c( 'Indústria geral') ~ 'Indústria',
       atividade_estabelecimentos %in% c( 'Agricultura, pecuária, produção florestal, pesca e aquicultura') ~ 'Agricultura',
-      atividade_estabelecimentos %in% c( 'Administração pública, defesa e seguridade social') ~ 'Adm. Pública'
+      atividade_estabelecimentos %in% c( 'Administração pública, defesa e seguridade social') ~ 'Adm. Pública',
+      TRUE ~ NA
     ), 
     d_agroalimentar = ifelse(cnae %in% df_cnae$cnae, 1, 0 )) %>% 
     left_join(df_cnae, by = 'cnae'); gc() 
@@ -147,6 +148,8 @@ trat_pnad <- function(ano, visita) {
 
 # Geração das tabelas específicas para o estudo
 tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
+  
+  cat('\n Tab1 Proporção de pessoas ocupadas')
   
   # Proporção de pessoas ocupadas na RM
   tab1 <- 
@@ -161,6 +164,8 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
   # TOTAL
   #
   
+  cat('\n Tab2 Participação das pessoas brancas na força de trabalho')
+  
   # Participação das pessoas brancas na força de trabalho
   tab2 <- 
     pnad_data %>%
@@ -172,6 +177,7 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     filter(d_brancos == 1) %>%
     select(prop)
   
+  cat('\n Tab3 Participação das mulheres na força de trabalho')
   # Participação das mulheres na força de trabalho
   tab3 <- 
     pnad_data %>%
@@ -188,6 +194,7 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
   # SETOR AGROALIMENTAR
   #
   
+  cat('\n Tab4 Participação das pessoas brancas na força de trabalho no setor agroalimentar')
   # Participação das pessoas brancas na força de trabalho
   tab4 <- 
     pnad_data %>%
@@ -199,7 +206,7 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     filter(d_brancos == 1) %>%
     select(prop)
   
-  
+  cat('\n Tab5 Participação das mulheres na força de trabalho')
   # Participação das mulheres na força de trabalho
   tab5 <- 
     pnad_data %>%
@@ -220,7 +227,7 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
                                    particip_mulheres_agroali = tab5$prop)
   
   
-  
+  cat('\n Tab6 Ocupação por setor (percentual)')
   # Ocupação por setor (percentual)
   tab6 <- 
     pnad_data %>%
@@ -240,8 +247,9 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
                 data.frame(setor = "Agroalimentar", ocupados = tab6_aux$ocupados, prop = tab6_aux$prop),
                 data.frame(setor = "Total", ocupados = sum(tab6$ocupados), prop = 100))
   
-  # Evolução da ocupação e do salário médio por setores na Região Metropolitana 
+  # Evolução da ocupação e do salário médio por setores
   
+  cat('\n Tab7 salário médio por setores')
   # Se a gente souber o que constitui o agroalimentar é só acrescentar aqui
   tab7 <- 
     pnad_data %>% 
@@ -272,10 +280,7 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
   
   
   # Salário por sexo 
-  # Parcipação dos brancos e das mulheres no setor agroalimentar 
-  # precisamos saber o que é o setor agroalimentar (pode ser agricultura + alimentos)
-  
-  
+  cat('\n Tab8 Salário por sexo')
   tab8 <- 
     pnad_data %>% 
     filter(ocupadas == 'Pessoas ocupadas') %>%
@@ -286,6 +291,7 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     pivot_wider(names_from = sexo, values_from = c(participacao, sexo_rendimento)) %>%
     mutate(setor = 'Total')
   
+  cat('\n Tab9 Agroalimentar')
   # Agroalimentar
   tab9 <- 
     pnad_data %>% 
@@ -294,13 +300,14 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     group_by(sexo, cor_raca) %>%
     summarise(participacao = sum(peso_dom),
               sexo_rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T)) %>%
-    mutate(participacao = participacao/sum(participacao)) %>%
+    mutate(participacao = participacao/sum(participacao)) %>% 
     pivot_wider(names_from = sexo, values_from = c(participacao, sexo_rendimento)) %>%
     mutate(setor = 'Agroalimentar')
   
-  tab8 = rbind(tab8, tab9)
+ 
+  tab8 <- bind_rows(tab8, tab9)
   
-  
+  cat('\n Tab10 Ocupação no setor agroalimentar')
   # Ocupação no setor agroalimentar
   tab10 <- 
     pnad_data %>%
@@ -392,7 +399,7 @@ estados <- c(
 
 cat('\nMontando o conjunto de possibilidades da lista no df_resultados...')
 
-years <- 2012:2019
+years <- 2012:2022
 blocos <- c('UF', 'RM', 'Capital')
 df_resultados <- expand.grid(years, estados, blocos)
 names(df_resultados) <- c('year', 'estado', 'regiao')

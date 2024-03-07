@@ -9,7 +9,7 @@
 
 
 # Pacotes
-load.lib <- c( "PNADcIBGE", "dplyr", "magrittr", "survey" )
+load.lib <- c( "PNADcIBGE", "dplyr", "magrittr", "survey", 'tidyr' )
 
 # Carregando os pacotes e instalando o que ainda não temos
 install.lib <- load.lib[ !load.lib %in% installed.packages() ]
@@ -24,6 +24,9 @@ scripts.path <- 'C:/Users/user/Projetos_GIT/escolhas-scripts-db/scripts'
 
 # Caminho dos arquivos
 pnad.path <- 'F:/Drive/BASES DE DADOS BRUTOS/PNAD_CONTÍNUA_IBGE/Anual/Raw_data_R'
+
+# Caminho para a pnadc tratada
+save.path <- 'F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Dados/PNADc_tratada'
 
 # Etapa 1: pegar a base completa da PNADc -----
 
@@ -83,23 +86,24 @@ source(file.path(scripts.path, 'funcoes_pnadc.R'), encoding = 'UTF-8')
 # A princípio 2016 está dando algum problema com a variável sexo, checar
 
 # Vamos fazer uma lista para cada dimensão da pnad
-lst.ocupados <- list()
-lst.ocup_agroali <- list()
-lst.setor    <- list()
-lst.cor.raca <- list()
+lst.ocupados       <- list()
+lst.ocup_agroali   <- list()
+lst.setor          <- list()
+lst.cor.raca       <- list()
 lst.agro_raca_sexo <- list()
 
 # Está salvo até 2019, temos que identificar o que mudou depois
 for (y in years) {
   
-  cat('\nPNADc ano:', y, paste0(Sys.time()))
+  cat('\n\n\n\nPNADc ano:', y, paste0(Sys.time()), '\n\n\n')
   
   # parte 1: abrindo a PNAD do ano
   pnad <- trat_pnad(ano = y, visita = 1); gc()
   
+  
   for (state in estados) {
     
-    cat('\n Estado:', state)
+    cat('\n\n Estado:', state)
     
     # Bloco 1: estatísticas da UF
     
@@ -140,9 +144,9 @@ for (y in years) {
     # Linha de referência nos resultados
     linha <- df_resultados %>% filter(year == y, estado == state, regiao == 'RM') 
     
-    lst.ocupados[[linha$num_row]] <- bloco_rm$ocupadas
-    lst.setor[[linha$num_row]]    <- bloco_rm$setor_rendimento
-    lst.cor.raca[[linha$num_row]] <- bloco_rm$setor_sexo
+    lst.ocupados[[linha$num_row]]       <- bloco_rm$ocupadas
+    lst.setor[[linha$num_row]]          <- bloco_rm$setor_rendimento
+    lst.cor.raca[[linha$num_row]]       <- bloco_rm$setor_sexo
     lst.agro_raca_sexo[[linha$num_row]] <- bloco_rm$agro_raca_sexo
     lst.ocup_agroali[[linha$num_row]]   <- bloco_rm$ocup_agroali
     
@@ -164,9 +168,9 @@ for (y in years) {
     # Linha de referência nos resultados
     linha <- df_resultados %>% filter(year == y, estado == state, regiao == 'Capital') 
     
-    lst.ocupados[[linha$num_row]] <- bloco_cap$ocupadas
-    lst.setor[[linha$num_row]]    <- bloco_cap$setor_rendimento
-    lst.cor.raca[[linha$num_row]] <- bloco_cap$setor_sexo
+    lst.ocupados[[linha$num_row]]       <- bloco_cap$ocupadas
+    lst.setor[[linha$num_row]]          <- bloco_cap$setor_rendimento
+    lst.cor.raca[[linha$num_row]]       <- bloco_cap$setor_sexo
     lst.agro_raca_sexo[[linha$num_row]] <- bloco_cap$agro_raca_sexo
     lst.ocup_agroali[[linha$num_row]]   <- bloco_cap$ocup_agroali
     
@@ -174,20 +178,21 @@ for (y in years) {
     
   }
   
+  rm(pnad); gc()
   
 }
 
-ocupados <- bind_rows(lst.ocupados)
-ocup_agroali <- bind_rows(lst.ocup_agroali)
-setor <- bind_rows(lst.setor)
-cor_raca <- bind_rows(lst.cor.raca)
+ocupados       <- bind_rows(lst.ocupados)
+ocup_agroali   <- bind_rows(lst.ocup_agroali)
+setor          <- bind_rows(lst.setor)
+cor_raca       <- bind_rows(lst.cor.raca)
 agro_raca_sexo <- bind_rows(lst.agro_raca_sexo)
 
 
 # Feito isso vamos salvar esses dados e depois tratar as tabelas para exportar
 
 save(list = c('ocupados', 'setor', 'cor_raca', 'agro_raca_sexo', 'ocup_agroali', 'estados'), 
-     file = 'F:/Drive/Projetos/Escolhas/2023/Dados 13 regiões/Dados/ENTRADA/dados_tratados.rdata')  
+     file = file.path(save.path, 'pnadc_tratada.rdata') )  
 
 final <- Sys.time()
 
