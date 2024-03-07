@@ -227,23 +227,36 @@ f_alimentos_fora_dom_2018 <- function(df, percentis) {
 }
 
 
-
-# FALTA ATUALIZAR ESSA FUNÇÃO ---------------------------------------------
-f_alimentos_kg_2018 <- function(df, percentis) {
+f_alimentos_kg_2018 <- function(df) {
   
   # Vamos substituir os missings por zero
   df$variables[is.na(df$variables)] <- 0
   
-  # Bloco 1: cálculo do valor despendido
+  
+  # Bloco 1: consumo de alimentos em kg
   df <- df %>%
-    group_by(decis) %>% # {{percentis}} # aqui o grupo não será decil, será por grupo de consumo
-    summarise(consumo_kg = 365*survey_mean( pc_consumo_gramas,  na.rm = TRUE)/10^3) %>%
+    summarise(careais = (365/10^3)*survey_mean(  pc_consumo_gr_dom_cereais,  na.rm = TRUE),
+              farinhas = (365/10^3)*survey_mean( pc_consumo_gr_dom_farinhas_e_massas,  na.rm = TRUE),
+              tuberculos = (365/10^3)*survey_mean( pc_consumo_gr_dom_tuberculos_raizes,  na.rm = TRUE),
+              acucares = (365/10^3)*survey_mean( pc_consumo_gr_dom_acucares_e_derivados,  na.rm = TRUE),
+              verduras = (365/10^3)*survey_mean( pc_consumo_gr_dom_legumes_e_verduras,  na.rm = TRUE),
+              frutas = (365/10^3)*survey_mean( pc_consumo_gr_dom_frutas,  na.rm = TRUE),
+              carnes_pescados = (365/10^3)*survey_mean( pc_consumo_gr_dom_carnes_e_pescados,  na.rm = TRUE),
+              aves_ovos = (365/10^3)*survey_mean( pc_consumo_gr_dom_aves_e_ovos,  na.rm = TRUE),
+              leites_derivados = (365/10^3)*survey_mean( pc_consumo_gr_dom_leites_e_derivados,  na.rm = TRUE),
+              panificados = (365/10^3)*survey_mean( pc_consumo_gr_dom_panificados,  na.rm = TRUE),
+              oleos_gorduras = (365/10^3)*survey_mean( pc_consumo_gr_dom_oleos_e_gorduras,  na.rm = TRUE),
+              bebidas_infusoes = (365/10^3)*survey_mean( pc_consumo_gr_dom_bebidas_e_infusoes,  na.rm = TRUE),
+              elatados = (365/10^3)*survey_mean( pc_consumo_gr_dom_enlatados,  na.rm = TRUE),
+              sal = (365/10^3)*survey_mean( pc_consumo_gr_dom_sal,  na.rm = TRUE),
+              preparados = (365/10^3)*survey_mean( pc_consumo_gr_dom_alimentos_preparados,  na.rm = TRUE)) %>%
     select(-(ends_with("_se"))) %>%
     as.data.frame()
   
+  
   # Formato final 
-  df_t <- t(df)
-  df_t <- df_t[-1,] %>% as.data.frame()
+  df_t <- t(df) %>% as.data.frame()
+  # df_t <- df_t[-1,] %>% as.data.frame()
   colnames(df_t) <- c(1:ncol(df_t))
   
   # Vamos então fazer a conta do percentual do gasto com cada grupo de alimento
@@ -253,26 +266,15 @@ f_alimentos_kg_2018 <- function(df, percentis) {
   percentage_df <- as.data.frame(apply(df_t, 1, function(col) col / col_sums )) # * 100
   percentage_df <- round(percentage_df,2)
   
+  df_export <- cbind(df_t, percentage_df)
   
-  if (ncol(percentage_df) == 1) {
-    
-    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
-    colnames(percentage_df) <- c('grupo', 'Total')
-    
-  } else {
-    
-    # Aqui temos que transpor antes
-    percentage_df <- t(percentage_df)
-    percentage_df <- data.frame(grupo = rownames(percentage_df), percentage_df)
-    colnames(percentage_df) <- c('grupo', 1:(ncol(percentage_df)-1))
-    
-  }
+  df_export[,1] <- round(df_export[,1], 2)
   
+  names(df_export) <- c('Consumo kg por ano', '% do total')
   
-  return(percentage_df)
+  return(df_export)
   
 }
-
 
 
 f_tipo_process_2018 <- function(df, percentis) {
@@ -375,8 +377,6 @@ f_consumo_kcal_2018 <- function(df, percentis) {
 
 f_inseguranca_2018 <- function(df) {
   
-  df = pof_svy
-  
   # Vamos substituir os missings por zero
   df$variables[is.na(df$variables)] <- 0
   
@@ -439,6 +439,176 @@ f_inseguranca_2018 <- function(df) {
     left_join(df6, by = 'inseguranca_alimentar') %>%
     left_join(df7, by = 'inseguranca_alimentar') %>% 
     left_join(df8, by = 'inseguranca_alimentar') 
+  
+}
+
+f_inseguranca_2018_br <- function(pof_br) {
+  
+  aux <- pof_br %>% 
+    group_by(ESTRATO_POF) %>% 
+    summarise(n = n()) %>% 
+    filter(n > 1 )
+  
+  cat('\nData cleanning for the sample')
+  pof_br <- pof_br %>% filter(ESTRATO_POF %in% aux$ESTRATO_POF )
+  
+  cat('\nDefining as survey design')
+  df <- as_survey(svydesign( ids = ~COD_UPA, 
+                             strata = ~ESTRATO_POF,
+                             weights = ~peso_final_fam, 
+                             data = pof_br, 
+                             check.strata = TRUE))
+
+  
+  # Vamos substituir os missings por zero
+  df$variables[is.na(df$variables)] <- 0
+  
+  # Bloco 1 Insegurança Alimentar no estrato como um todo 
+  
+  # Bloco 1: 
+  df1 <- df %>%
+    group_by(inseguranca_alimentar) %>% 
+    summarise(pop_geral = survey_prop()) %>%
+    select(-(ends_with("_se"))) 
+  
+  df2 <- df %>%
+    filter(chefe_dom_over_65 == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_over_65 = survey_prop()) %>%
+    select(-(ends_with("_se"))) 
+  
+  df3 <- df %>%
+    filter(chefe_dom_analf == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_analf = survey_prop()) %>%
+    select(-(ends_with("_se"))) 
+  
+  df4 <- df %>%
+    filter(chefe_dom_EF == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_EF = survey_prop()) %>%
+    select(-(ends_with("_se"))) 
+  
+  df5 <- df %>%
+    filter(chefe_dom_EM == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_EM = survey_prop()) %>%
+    select(-(ends_with("_se"))) 
+  
+  df6 <- df %>%
+    filter(chefe_dom_mulher == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_mulher = survey_prop()) %>%
+    select(-(ends_with("_se")))
+  
+  df7 <- df %>%
+    filter(chefe_dom_negro == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_dom_negro = survey_prop()) %>%
+    select(-(ends_with("_se")))
+  
+  df8 <- df %>%
+    filter(chefe_dom_mulher == 1, chefe_dom_negro == 1, chefe_dom_EF == 1) %>% 
+    group_by(inseguranca_alimentar) %>% 
+    summarise(fam_chefe_mulh_negra_EF = survey_prop()) %>%
+    select(-(ends_with("_se")))
+  
+  
+  df1 %>% 
+    left_join(df2, by = 'inseguranca_alimentar') %>%
+    left_join(df3, by = 'inseguranca_alimentar') %>%
+    left_join(df4, by = 'inseguranca_alimentar') %>%
+    left_join(df5, by = 'inseguranca_alimentar') %>%
+    left_join(df6, by = 'inseguranca_alimentar') %>%
+    left_join(df7, by = 'inseguranca_alimentar') %>% 
+    left_join(df8, by = 'inseguranca_alimentar') 
+  
+}
+
+f_gasto_alimentacao_estrato_2018 <- function(df, estrato, region_name, year) {
+  
+  df <- filter(df, ESTRATO_POF %in% estrato)
+  
+  df_tab <- df %>%
+    summarise(renda_dom_pc_disp = survey_mean( PC_RENDA_DISP,  na.rm = TRUE),
+              despesa_alimentos = survey_mean( pc_desp_nivel3_Alimentacao,  na.rm = TRUE),
+              despesa_alimentos_no_dom = survey_mean( pc_desp_nivel4_Alimentacao_no_dom,  na.rm = TRUE),
+              despesa_alimentos_fora_dom = survey_mean( pc_desp_nivel4_Alimentacao_fora_dom,  na.rm = TRUE),
+              despesa_habitacao = survey_mean( pc_desp_nivel3_Habitacao,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( pc_desp_nivel3_Vestuario,  na.rm = TRUE),
+              despesa_transporte = survey_mean( pc_desp_nivel3_Transporte,  na.rm = TRUE),
+              despesa_higiene = survey_mean( pc_desp_nivel3_Higiene,  na.rm = TRUE),
+              despesa_saude = survey_mean( pc_desp_nivel3_Saude,  na.rm = TRUE),
+              despesa_educacao = survey_mean( pc_desp_nivel3_Educacao,  na.rm = TRUE),
+              despesa_cultura = survey_mean( pc_desp_nivel3_Lazer_e_cult,  na.rm = TRUE),
+              despesa_fumo = survey_mean( pc_desp_nivel3_Fumo,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( pc_desp_nivel3_Serv_pessoais,  na.rm = TRUE),
+              despesa_diversas = survey_mean( pc_desp_nivel3_diversos,  na.rm = TRUE)
+    ) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+             despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+             despesa_serv_pessoais + despesa_diversas) %>%
+    mutate(perc_aliment_orcamento = round(100*despesa_alimentos/despesa_consumo),
+           perc_aliment_no_domicilio = round(100*despesa_alimentos_no_dom/despesa_alimentos)) %>%
+    mutate(unidade_analise = region_name, pof_year = year) %>%
+    select(unidade_analise, pof_year, perc_aliment_orcamento, perc_aliment_no_domicilio) %>%
+    
+    as.data.frame()
+  
+  return(df_tab)
+  
+  
+  
+}
+
+
+f_gasto_alimentacao_br_2018 <- function(pof_br, region_name) {
+  
+  
+  aux <- pof_br %>% 
+    group_by(ESTRATO_POF) %>% 
+    summarise(n = n()) %>% 
+    filter(n > 1 )
+  
+  cat('\nData cleanning for the sample')
+  pof_br <- pof_br %>% filter(ESTRATO_POF %in% aux$ESTRATO_POF )
+  
+  cat('\nDefining as survey design')
+  pof_svy <- as_survey(svydesign(ids = ~COD_UPA, 
+                                 strata = ~ESTRATO_POF,
+                                 weights = ~peso_final_fam, 
+                                 data = pof_br, 
+                                 check.strata = TRUE))
+  
+  df_tab <- pof_svy %>%
+    summarise(renda_dom_pc_disp = survey_mean( PC_RENDA_DISP,  na.rm = TRUE),
+              despesa_alimentos = survey_mean( pc_desp_nivel3_Alimentacao,  na.rm = TRUE),
+              despesa_alimentos_no_dom = survey_mean( pc_desp_nivel4_Alimentacao_no_dom,  na.rm = TRUE),
+              despesa_alimentos_fora_dom = survey_mean( pc_desp_nivel4_Alimentacao_fora_dom,  na.rm = TRUE),
+              despesa_habitacao = survey_mean( pc_desp_nivel3_Habitacao,  na.rm = TRUE),
+              despesa_vestuario = survey_mean( pc_desp_nivel3_Vestuario,  na.rm = TRUE),
+              despesa_transporte = survey_mean( pc_desp_nivel3_Transporte,  na.rm = TRUE),
+              despesa_higiene = survey_mean( pc_desp_nivel3_Higiene,  na.rm = TRUE),
+              despesa_saude = survey_mean( pc_desp_nivel3_Saude,  na.rm = TRUE),
+              despesa_educacao = survey_mean( pc_desp_nivel3_Educacao,  na.rm = TRUE),
+              despesa_cultura = survey_mean( pc_desp_nivel3_Lazer_e_cult,  na.rm = TRUE),
+              despesa_fumo = survey_mean( pc_desp_nivel3_Fumo,  na.rm = TRUE),
+              despesa_serv_pessoais = survey_mean( pc_desp_nivel3_Serv_pessoais,  na.rm = TRUE),
+              despesa_diversas = survey_mean( pc_desp_nivel3_diversos,  na.rm = TRUE)
+    ) %>%
+    mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
+             despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
+             despesa_serv_pessoais + despesa_diversas) %>%
+    mutate(perc_aliment_orcamento = round(100*despesa_alimentos/despesa_consumo),
+           perc_aliment_no_domicilio = round(100*despesa_alimentos_no_dom/despesa_alimentos)) %>%
+    mutate(unidade_analise = region_name, pof_year = 2018) %>%
+    select(unidade_analise, pof_year, perc_aliment_orcamento, perc_aliment_no_domicilio) %>%
+    
+    as.data.frame()
+  
+  return(df_tab)
+  
+  
   
 }
 
@@ -549,20 +719,22 @@ f_gasto_alimentacao_estrato_2002_2008 <- function(df, estrato, region_name, year
   
 }
 
-# EM CONSTRUÇÃO ......
 # mesma coisa do estrato, mas aqui para o Brasil
 f_gasto_alimentacao_br_2002_2008 <- function(pof_br, region_name, year) {
+  
+  cat('\nFiltering the year')
   
   pof_br <- pof_br %>% filter(ano == year)
   
   aux <- pof_br %>% 
-    group_by(ESTRATO_POF) %>% 
+    group_by(estrato_pof) %>% 
     summarise(n = n()) %>% 
     filter(n > 1 )
   
-  pof_br <- pof_br %>% filter(ESTRATO_POF %in% aux$ESTRATO_POF )
+  cat('\nData cleanning for the sample')
+  pof_br <- pof_br %>% filter(estrato_pof %in% aux$estrato_pof )
   
-  
+  cat('\nDefining as survey design')
   pof_svy <- as_survey(svydesign(ids = ~COD_UPA, 
                                  strata = ~estrato_pof,
                                  weights = ~peso_fam, 
