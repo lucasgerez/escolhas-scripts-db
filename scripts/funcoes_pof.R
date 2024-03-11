@@ -11,7 +11,7 @@
 
 cat('Loading the packages .... \n')
 # Pacotes
-load.lib <- c( "tidyr", "dplyr", "openxlsx", "survey", "srvyr", 'Hmisc', 'janitor' )
+load.lib <- c( "tidyr", "dplyr", "openxlsx", "survey", "srvyr", 'Hmisc', 'janitor', 'readxl' )
 
 
 # Carregando os pacotes e instalando o que ainda não temos
@@ -20,6 +20,60 @@ install.lib <- load.lib[ !load.lib %in% installed.packages() ]
 for( lib in install.lib ) install.packages( lib, dependencies = TRUE )
 sapply( load.lib, require, character = TRUE )
 rm(list = c("install.lib", "lib", "load.lib"))
+
+
+
+
+# Estratos ----------------------------------------------------------------
+
+cat('Elaborando a tabela com os estratos .... \n')
+
+get_estratos_f <- function(estrato) {
+  
+  if (is.na(estrato))  {
+    
+    valor <- NA
+    
+  } else if (nchar(estrato) == 9) {
+    
+    valor <- as.numeric(substr(estrato,1,4)):as.numeric(substr(estrato,6,9)) 
+    
+  } else {
+    
+    valor <- as.numeric(estrato)
+    
+  }
+  
+  return(valor)
+  
+}
+
+estratos <- read_excel(path = estratos_path, sheet = 'Plan3')
+
+lst.estratos <- list()
+
+for (linha in 1:nrow(estratos)) {
+  
+  estratos_aux <- get_estratos_f(estrato = estratos$capital[linha])
+  estratos_capital_ref <- data.frame(uf = estratos$UF[linha], regiao = 'capital', estratos = estratos_aux)
+  
+  estratos_aux <- get_estratos_f(estrato = estratos$rm[linha])
+  estratos_rm_ref <- data.frame(uf = estratos$UF[linha], regiao = 'rm', estratos = estratos_aux)
+  
+  estratos_resto_uf_ref <- get_estratos_f(estrato = estratos$resto_uf[linha])
+  estratos_resto_uf_ref <- data.frame(uf = estratos$UF[linha], regiao = 'resto_uf_ref', estratos = estratos_aux)
+  
+  estratos_aux <- get_estratos_f(estrato = estratos$rural[linha])
+  estratos_rural_ref <- data.frame(uf = estratos$UF[linha], regiao = 'rural_ref', estratos = estratos_aux)
+  
+  df_estratos <- bind_rows(estratos_capital_ref, estratos_rm_ref, estratos_resto_uf_ref, estratos_rural_ref)
+  
+  lst.estratos[[linha]] <- df_estratos
+  
+  
+}
+
+df_estratos <- bind_rows(lst.estratos)
 
 
 # Funcoes POF 2002 e 2008 -------------------------------------------------
@@ -170,7 +224,6 @@ f_alimentos_no_dom_2018 <- function(df, percentis) {
   
 }
 
-
 f_alimentos_fora_dom_2018 <- function(df, percentis) {
   
   # Vamos substituir os missings por zero
@@ -225,7 +278,6 @@ f_alimentos_fora_dom_2018 <- function(df, percentis) {
   
 }
 
-
 f_alimentos_kg_2018 <- function(df) {
   
   # Vamos substituir os missings por zero
@@ -274,7 +326,6 @@ f_alimentos_kg_2018 <- function(df) {
   return(df_export)
   
 }
-
 
 f_tipo_process_2018 <- function(df, percentis) {
   
@@ -616,11 +667,11 @@ f_gasto_alimentacao_br_2018 <- function(pof_br, region_name) {
 
 cat('\n\n Getting the data .... ')
 
-pof_2002 <- read.csv('F:/Drive/BASES DE DADOS BRUTOS/POF/POF 2002-2003/raw/pof_2002.csv') %>% clean_names()
+pof_2002 <- read.csv( file.path(dados_brutos_path,'POF/POF 2002-2003/raw/pof_2002.csv') ) %>% clean_names()
 
 cat('\nTabela wide da Pof 2002:', nrow(pof_2002), 'linhas...')
 
-pof_2008 <- read.csv('F:/Drive/BASES DE DADOS BRUTOS/POF/POF 2008-2009/raw/pof_2008.csv') %>% clean_names()
+pof_2008 <- read.csv(file.path(dados_brutos_path,'POF/POF 2008-2009/raw/pof_2008.csv')) %>% clean_names()
 
 cat('\nTabela wide da Pof 2008:', nrow(pof_2008), 'linhas...')
 

@@ -12,9 +12,9 @@
 
 ## Funções necessárias para as tabelas ----
 
-result_path <- 'F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Resultados/POF' # sempre checar se o caminho se mantém
-
-estratos_path <- 'E:/Drive/BASES DE DADOS BRUTOS/POF/POF 2017-2018/Microdados/Documentacao_20221226/Estratos POF 2017-2018.xls' # sempre checar se o caminho se mantém
+result_path       <- 'F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Resultados/POF' # sempre checar se o caminho se mantém
+estratos_path     <- 'E:/Drive/BASES DE DADOS BRUTOS/POF/POF 2017-2018/Microdados/Documentacao_20221226/Estratos POF 2017-2018.xls' # sempre checar se o caminho se mantém
+dados_brutos_path <- 'E:/Drive/BASES DE DADOS BRUTOS'
 
 # Caminho dos scripts na máquina local
 git_path <- 'C:/Users/user/Documents/Projetos_github/escolhas-scripts-db/'
@@ -24,87 +24,15 @@ source(file.path( git_path, "scripts/funcoes_pof.R" ), encoding = 'UTF-8')
 
 inicial <- Sys.time()
 
-
-# PAREI AQUI --------------------------------------------------------------
-
-library(readxl)
-
-get_estratos_f <- function(estrato) {
-  
-  if (is.na(estrato))  {
-    
-    valor <- NA
-    
-  } else if (nchar(estrato) == 9) {
-    
-    valor <- as.numeric(substr(estrato,1,4)):as.numeric(substr(estrato,6,9)) 
-    
-  } else {
-    
-    valor <- as.numeric(estrato)
-    
-  }
-  
-  return(valor)
-  
-}
-
-estratos <- read_excel(path = estratos_path, sheet = 'Plan3')
-
-estratos$capital_list <- list()
-estratos$rm_list <- list()
-estratos$resto_uf_list <- list()
-estratos$rural_list <- list()
-
-lst.estratos <- list()
-
-for (linha in 1:nrow(estratos)) {
-  
-  estratos_aux <- get_estratos_f(estrato = estratos$capital[linha])
-  estratos_capital_ref <- data.frame(uf = estratos$UF[linha], regiao = 'capital', estratos = estratos_aux)
-  
-  estratos_aux <- get_estratos_f(estrato = estratos$rm[linha])
-  estratos_rm_ref <- data.frame(uf = estratos$UF[linha], regiao = 'rm', estratos = estratos_aux)
-    
-  estratos_resto_uf_ref <- get_estratos_f(estrato = estratos$resto_uf[linha])
-  estratos_resto_uf_ref <- data.frame(uf = estratos$UF[linha], regiao = 'resto_uf_ref', estratos = estratos_aux)
-  
-  estratos_aux <- get_estratos_f(estrato = estratos$rural[linha])
-  estratos_rural_ref <- data.frame(uf = estratos$UF[linha], regiao = 'rural_ref', estratos = estratos_aux)
-  
-  df_estratos <- bind_rows(estratos_capital_ref, estratos_rm_ref, estratos_resto_uf_ref, estratos_rural_ref)
-  
-  lst.estratos[[linha]] <- df_estratos
-  
-  
-}
-
-
-df_estratos <- bind_rows(lst.estratos)
-
-
-
-# Estratos Brasil
-estratos <- read.xlsx(xlsxFile = file.path(estratos_path),sheet = 'Plan1')
-
-
-# Arranjos geográficos a serem definidos
-estrato_uf_com_rural        <- 4101:4135
-estrato_uf_sem_rural        <- 4101:4124
-estrato_uf_sem_rm_sem_rural <- 4108:4124
-estrato_rm                  <- 4101:4108
-estrato_rm_sem_capital      <- 4106:4108
-estrato_capital             <- 4101:4105
+## Estratos do Brasil ----
+estrato_BR_com_rural  <- df_estratos[is.na(df_estratos$estratos)==F,]$estratos  
+estrato_BR_sem_rural  <- df_estratos[is.na(df_estratos$estratos)==F & df_estratos$regiao != 'rural_ref' ,]$estratos  
 
 # Todos os estratos que faremos
-dimensoes <- c('estrato_uf_com_rural', 'estrato_uf_sem_rural',
-               'estrato_uf_sem_rm_sem_rural', 'estrato_rm',
-               'estrato_rm_sem_capital', 'estrato_capital')
-
+dimensoes <- c('estrato_BR_com_rural', 'estrato_BR_sem_rural')
 
 
 ## POF 2002 e 2008 ----
-
 
 # fonte
 # https://github.com/CaoBittencourt/Data-Science-Python/blob/main/pof_2008.rar
@@ -201,16 +129,6 @@ names(lst.years) <- c("y_2002", "y_2008")
 
 # Acho que faz sentido reorganizar essa tabela na hora de exportar
 tabela_orcamento_alim <- bind_rows(lst.food.expend)
-
-
-# Tabela do Brasil
-aux1 <- f_gasto_alimentacao_br_2002_2008(pof_br = pof_res, region_name = 'Brasil', year = 2002)
-aux2 <- f_gasto_alimentacao_br_2002_2008(pof_br = pof_res, region_name = 'Brasil', year = 2008)
-
-# temos que calcular isso para 2018 tbm
-
-# isso vai se juntar com 
-tabela_orcamento_alim <- rbind(tabela_orcamento_alim, aux1, aux2)
 
 
 ## POF 2018 ----
@@ -367,8 +285,6 @@ for (d in dimensoes) {
   
   lst.food.expend[[match(d, dimensoes)]] <- t8
   
-  
-  
 }
 
 # nomes para facilitar
@@ -385,12 +301,8 @@ names(lst.kg)          <- dimensoes
 # Acho que faz sentido reorganizar essa tabela na hora de exportar
 tabela_orcamento_alim2018 <- bind_rows(lst.food.expend)
 
-
-# Tabela do Brasil
-aux3 <- f_gasto_alimentacao_br_2018(pof_br = pof_2018, region_name = 'Brasil')
-
 # Tabela consolidada de alimentos
-tabela_orcamento_alim <- rbind(tabela_orcamento_alim, tabela_orcamento_alim2018, aux3)
+tabela_orcamento_alim <- rbind(tabela_orcamento_alim, tabela_orcamento_alim2018)
 
 tabela_orcamento_alim <- tabela_orcamento_alim %>% arrange(unidade_analise, pof_year)
 
@@ -406,13 +318,9 @@ inseg_br <- f_inseguranca_2018_br(pof_2018)
 
 # Feito isso vamos exportar as tabelas (de 2002 a 2018)
 
-leia.me <- data.frame( identificador = c('01','02', '03', '04','05', '06'),
-                       nivel_geografico = c('UF incluindo rural',
-                                            'UF SEM incluir rural',
-                                            'Regiões da UF fora da RM SEM incluir rural',
-                                            'Região Metropolitana (RM)',
-                                            'RM exceto capital (Curitiba)',
-                                            'Capital (Curitiba)'),
+leia.me <- data.frame( identificador = c('01','02'),
+                       nivel_geografico = c('Brasil incluindo rural',
+                                            'Brasil SEM incluir rural'),
                        unidade = c('Todas as unidades apresentadas correspondem a valores per capita calculados para o domicílio'))
 
 #### tabela_orcamento_alim precisar ser exportada! 
@@ -421,95 +329,49 @@ sheets <- list("leia_me" = leia.me,
                
                "tabela_orcamento_alim" = tabela_orcamento_alim,
                
-               "desp_01_2002" = lst.years$y_2002$estrato_uf_com_rural, 
-               "desp_02_2002" = lst.years$y_2002$estrato_uf_sem_rural,
-               "desp_03_2002" = lst.years$y_2002$estrato_uf_sem_rm_sem_rural,
-               "desp_04_2002" = lst.years$y_2002$estrato_rm,
-               "desp_05_2002" = lst.years$y_2002$estrato_rm_sem_capital,
-               "desp_06_2002" = lst.years$y_2002$estrato_capital,
+               "desp_01_2002" = lst.years$y_2002$estrato_BR_com_rural, 
+               "desp_02_2002" = lst.years$y_2002$eestrato_BR_sem_rural,
                
-               "desp_01_2008" = lst.years$y_2008$estrato_uf_com_rural, 
-               "desp_02_2008" = lst.years$y_2008$estrato_uf_sem_rural,
-               "desp_03_2008" = lst.years$y_2008$estrato_uf_sem_rm_sem_rural,
-               "desp_04_2008" = lst.years$y_2008$estrato_rm,
-               "desp_05_2008" = lst.years$y_2008$estrato_rm_sem_capital,
-               "desp_06_2008" = lst.years$y_2008$estrato_capital,
+               "desp_01_2008" = lst.years$y_2008$estrato_BR_com_rural, 
+               "desp_02_2008" = lst.years$y_2008$eestrato_BR_sem_rural,
                
                # Bloco 1: Despesas nos grandes grupos
-               "desp_grupo_01_2018" = lst.tab$estrato_uf_com_rural, 
-               "desp_grupo_02_2018" = lst.tab$estrato_uf_sem_rural,
-               "desp_grupo_03_2018" = lst.tab$estrato_uf_sem_rm_sem_rural,
-               "desp_grupo_04_2018" = lst.tab$estrato_rm,
-               "desp_grupo_05_2018" = lst.tab$estrato_rm_sem_capital,
-               "desp_grupo_06_2018" = lst.tab$estrato_capital,
+               "desp_grupo_01_2018" = lst.tab$estrato_BR_com_rural, 
+               "desp_grupo_02_2018" = lst.tab$eestrato_BR_sem_rural,
                
                # Bloco 2: share por tipo de alimento
-               "desp_alim_dom_01_2018" = as.data.frame(lst.perc$estrato_uf_com_rural), 
-               "desp_alim_dom_02_2018" = lst.perc$estrato_uf_sem_rural,
-               "desp_alim_dom_03_2018" = lst.perc$estrato_uf_sem_rm_sem_rural,
-               "desp_alim_dom_04_2018" = lst.perc$estrato_rm,
-               "desp_alim_dom_05_2018" = lst.perc$estrato_rm_sem_capital,
-               "desp_alim_dom_06_2018" = lst.perc$estrato_capital,
-               
+               "desp_alim_dom_01_2018" = as.data.frame(lst.perc$estrato_BR_com_rural), 
+               "desp_alim_dom_02_2018" = lst.perc$eestrato_BR_sem_rural,
+              
                # Bloco 3: share por tipo de alimento FORA do domicilio
-               "desp_alim_fora_dom_01_2018" = lst.fora.dom$estrato_uf_com_rural, 
-               "desp_alim_fora_dom_02_2018" = lst.fora.dom$estrato_uf_sem_rural,
-               "desp_alim_fora_dom_03_2018" = lst.fora.dom$estrato_uf_sem_rm_sem_rural,
-               "desp_alim_fora_dom_04_2018" = lst.fora.dom$estrato_rm,
-               "desp_alim_fora_dom_05_2018" = lst.fora.dom$estrato_rm_sem_capital,
-               "desp_alim_fora_dom_06_2018" = lst.fora.dom$estrato_capital,
+               "desp_alim_fora_dom_01_2018" = lst.fora.dom$estrato_BR_com_rural, 
+               "desp_alim_fora_dom_02_2018" = lst.fora.dom$eestrato_BR_sem_rural,
                
                # Bloco 4: share por tipo de processamento
-               "desp_alim_tipo_proc_01_2018" = lst.proc$estrato_uf_com_rural, 
-               "desp_alim_tipo_proc_02_2018" = lst.proc$estrato_uf_sem_rural,
-               "desp_alim_tipo_proc_03_2018" = lst.proc$estrato_uf_sem_rm_sem_rural,
-               "desp_alim_tipo_proc_04_2018" = lst.proc$estrato_rm,
-               "desp_alim_tipo_proc_05_2018" = lst.proc$estrato_rm_sem_capital,
-               "desp_alim_tipo_proc_06_2018" = lst.proc$estrato_capital,
+               "desp_alim_tipo_proc_01_2018" = lst.proc$estrato_BR_com_rural, 
+               "desp_alim_tipo_proc_02_2018" = lst.proc$eestrato_BR_sem_rural,
                
                # consumo em kg por tipo de alimento
-               "consumo_kg_01_2018" = lst.kg$estrato_uf_com_rural, 
-               "consumo_kg_02_2018" = lst.kg$estrato_uf_sem_rural,
-               "consumo_kg_03_2018" = lst.kg$estrato_uf_sem_rm_sem_rural,
-               "consumo_kg_04_2018" = lst.kg$estrato_rm,
-               "consumo_kg_05_2018" = lst.kg$estrato_rm_sem_capital,
-               "consumo_kg_06_2018" = lst.kg$estrato_capital,
-               
+               "consumo_kg_01_2018" = lst.kg$estrato_BR_com_rural, 
+               "consumo_kg_02_2018" = lst.kg$eestrato_BR_sem_rural,
                
                # Bloco 5: share por tipo de processamento
-               "consumo_perc_kcal_01_2018" = lst.kcal$estrato_uf_com_rural, 
-               "consumo_perc_kcal_02_2018" = lst.kcal$estrato_uf_sem_rural,
-               "consumo_perc_kcal_03_2018" = lst.kcal$estrato_uf_sem_rm_sem_rural,
-               "consumo_perc_kcal_04_2018" = lst.kcal$estrato_rm,
-               "consumo_perc_kcal_05_2018" = lst.kcal$estrato_rm_sem_capital,
-               "consumo_perc_kcal_06_2018" = lst.kcal$estrato_capital,
-               
+               "consumo_perc_kcal_01_2018" = lst.kcal$estrato_BR_com_rural, 
+               "consumo_perc_kcal_02_2018" = lst.kcal$eestrato_BR_sem_rural,
                
                # Bloco 6: share por tipo de processamento
-               "reais_por_kcal_01_2018" = lst.reais.kcal$estrato_uf_com_rural, 
-               "reais_por_kcal_02_2018" = lst.reais.kcal$estrato_uf_sem_rural,
-               "reais_por_kcal_03_2018" = lst.reais.kcal$estrato_uf_sem_rm_sem_rural,
-               "reais_por_kcal_04_2018" = lst.reais.kcal$estrato_rm,
-               "reais_por_kcal_05_2018" = lst.reais.kcal$estrato_rm_sem_capital,
-               "reais_por_kcal_06_2018" = lst.reais.kcal$estrato_capital,
-               
+               "reais_por_kcal_01_2018" = lst.reais.kcal$estrato_BR_com_rural, 
+               "reais_por_kcal_02_2018" = lst.reais.kcal$eestrato_BR_sem_rural,
                
                # Bloco 7: insegurança alimentar
-               "inseg_alim_01_2018" = lst.inseguranca$estrato_uf_com_rural, 
-               "inseg_alim_02_2018" = lst.inseguranca$estrato_uf_sem_rural,
-               "inseg_alim_03_2018" = lst.inseguranca$estrato_uf_sem_rm_sem_rural,
-               "inseg_alim_04_2018" = lst.inseguranca$estrato_rm,
-               "inseg_alim_05_2018" = lst.inseguranca$estrato_rm_sem_capital,
-               "inseg_alim_06_2018" = lst.inseguranca$estrato_capital,
-               
+               "inseg_alim_01_2018" = lst.inseguranca$estrato_BR_com_rural, 
+               "inseg_alim_02_2018" = lst.inseguranca$eestrato_BR_sem_rural,
+              
                "inseg_alim_br_2018" = inseg_br
-               
-               
                
 )
 
-
-write.xlsx(sheets, file = file.path(result_path, "curitiba_pof_tabelas.xlsx"))
+write.xlsx(sheets, file = file.path(result_path, "Brasil_pof_tabelas.xlsx"))
 
 
 
