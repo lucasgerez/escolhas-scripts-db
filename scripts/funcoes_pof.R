@@ -43,7 +43,6 @@ f_xtile_filter_2018 <- function(df, variavel, var_peso, nova_var, n, estrato, es
   
 }
 
-
 # Calculo da renda pc 
 f_inc_dist_filter_2018 <- function(pof_svy, variavel, var_peso, nova_var, n, estrato, 
                                    estrato_var_name = 'estrato_pof') {
@@ -105,7 +104,7 @@ f_medias_2018 <- function(df, percentis) {
              despesa_serv_pessoais + despesa_diversas) %>%
     select({{percentis}}, despesa_total, despesa_consumo, despesa_alimentos,
            despesa_alimentos_no_dom, despesa_alimentos_fora_dom,
-           despesa_habitacao, despesa_vestuario, despesa_transporte, despesa_saude ) %>%
+           despesa_habitacao, despesa_transporte, despesa_saude ) %>%
     as.data.frame()
   
   return(df)
@@ -842,7 +841,7 @@ f_medias_2002_2008 <- function(df, percentis) {
     mutate(despesa_consumo = despesa_alimentos + despesa_habitacao + despesa_vestuario + despesa_transporte +
              despesa_higiene + despesa_saude + despesa_educacao + despesa_cultura + despesa_fumo +
              despesa_serv_pessoais + despesa_diversas) %>%
-    select({{percentis}}, despesa_total, despesa_consumo, despesa_alimentos, despesa_alimentos_no_dom, despesa_alimentos_fora_dom, despesa_habitacao, despesa_vestuario, despesa_transporte, despesa_saude ) %>%
+    select({{percentis}}, despesa_total, despesa_consumo, despesa_alimentos, despesa_alimentos_no_dom, despesa_alimentos_fora_dom, despesa_habitacao, despesa_transporte, despesa_saude ) %>%
     as.data.frame()
   
   return(df)

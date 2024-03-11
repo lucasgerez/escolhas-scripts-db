@@ -1,7 +1,7 @@
 
 # ------------------------------------------------------------------------- # 
 
-# DADOS DA POF: tabelas consolidadas
+# DADOS DA POF: tabelas consolidadas a nível Brasil
 
 # ------------------------------------------------------------------------- # 
 
@@ -14,15 +14,79 @@
 
 result_path <- 'F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Resultados/POF' # sempre checar se o caminho se mantém
 
+estratos_path <- 'E:/Drive/BASES DE DADOS BRUTOS/POF/POF 2017-2018/Microdados/Documentacao_20221226/Estratos POF 2017-2018.xls' # sempre checar se o caminho se mantém
+
 # Caminho dos scripts na máquina local
-git_path <- 'C:/Users/user/Projetos_GIT/escolhas-scripts-db'
+git_path <- 'C:/Users/user/Documents/Projetos_github/escolhas-scripts-db/'
 
 # Vamos rodar as funções no Git
 source(file.path( git_path, "scripts/funcoes_pof.R" ), encoding = 'UTF-8')
 
 inicial <- Sys.time()
 
-# Estratos de Curitiba (comum em todos os anos)
+
+# PAREI AQUI --------------------------------------------------------------
+
+library(readxl)
+
+get_estratos_f <- function(estrato) {
+  
+  if (is.na(estrato))  {
+    
+    valor <- NA
+    
+  } else if (nchar(estrato) == 9) {
+    
+    valor <- as.numeric(substr(estrato,1,4)):as.numeric(substr(estrato,6,9)) 
+    
+  } else {
+    
+    valor <- as.numeric(estrato)
+    
+  }
+  
+  return(valor)
+  
+}
+
+estratos <- read_excel(path = estratos_path, sheet = 'Plan3')
+
+estratos$capital_list <- list()
+estratos$rm_list <- list()
+estratos$resto_uf_list <- list()
+estratos$rural_list <- list()
+
+lst.estratos <- list()
+
+for (linha in 1:nrow(estratos)) {
+  
+  estratos_aux <- get_estratos_f(estrato = estratos$capital[linha])
+  estratos_capital_ref <- data.frame(uf = estratos$UF[linha], regiao = 'capital', estratos = estratos_aux)
+  
+  estratos_aux <- get_estratos_f(estrato = estratos$rm[linha])
+  estratos_rm_ref <- data.frame(uf = estratos$UF[linha], regiao = 'rm', estratos = estratos_aux)
+    
+  estratos_resto_uf_ref <- get_estratos_f(estrato = estratos$resto_uf[linha])
+  estratos_resto_uf_ref <- data.frame(uf = estratos$UF[linha], regiao = 'resto_uf_ref', estratos = estratos_aux)
+  
+  estratos_aux <- get_estratos_f(estrato = estratos$rural[linha])
+  estratos_rural_ref <- data.frame(uf = estratos$UF[linha], regiao = 'rural_ref', estratos = estratos_aux)
+  
+  df_estratos <- bind_rows(estratos_capital_ref, estratos_rm_ref, estratos_resto_uf_ref, estratos_rural_ref)
+  
+  lst.estratos[[linha]] <- df_estratos
+  
+  
+}
+
+
+df_estratos <- bind_rows(lst.estratos)
+
+
+
+# Estratos Brasil
+estratos <- read.xlsx(xlsxFile = file.path(estratos_path),sheet = 'Plan1')
+
 
 # Arranjos geográficos a serem definidos
 estrato_uf_com_rural        <- 4101:4135
@@ -110,14 +174,14 @@ for (y in anos) {
                                              nova_var = "decis",
                                              n = 10,
                                              estrato = get(d) ) # get(d)
-
+    
     t1 <- f_medias_2002_2008(pof_svy, decis)
     pof_svy$variables$um <- 999 # para o total
     t1b <- f_medias_2002_2008(pof_svy, um)
     names(t1b)[1] <- "decis"
     t1b$decis <- 'Total'
     t1 <- rbind(t1, t1b)
-
+    
     # Juntando tabela 1, 2 e 3
     lst.tab[[match(d, dimensoes)]] <-
       tab_renda %>%
@@ -128,7 +192,7 @@ for (y in anos) {
   
   # nomes para facilitar
   names(lst.tab) <- dimensoes
-
+  
   lst.years[[match(y, anos)]] <- lst.tab
   
 }
@@ -202,17 +266,17 @@ for (d in dimensoes) {
   
   # Renda domiciliar per capita disponível
   tab_renda <- f_inc_dist_filter_2018(pof_svy = pof_svy, 
-                                     variavel = "PC_RENDA_DISP", 
-                                     var_peso = "peso_final_fam",
-                                     nova_var = "decis", 
-                                     n = 10, 
-                                     estrato = get(d),
-                                     estrato_var_name = ESTRATO_POF ) # get(d)
+                                      variavel = "PC_RENDA_DISP", 
+                                      var_peso = "peso_final_fam",
+                                      nova_var = "decis", 
+                                      n = 10, 
+                                      estrato = get(d),
+                                      estrato_var_name = ESTRATO_POF ) # get(d)
   
   pof_svy$variables$um <- 999 # para o total
   
   cat('\n     Tabela 1 - grandes grupos', paste(Sys.time()))
-
+  
   # Bloco de gastos por grandes grupos
   t1 <- f_medias_2018(pof_svy, decis)
   t1b <- f_medias_2018(pof_svy, um)
@@ -220,66 +284,66 @@ for (d in dimensoes) {
   t1b$decis <- 'Total'
   t1 <- rbind(t1, t1b)
   t1 <- left_join(tab_renda, t1, by = 'decis')
-
+  
   # Tabela 1
   lst.tab[[match(d, dimensoes)]] <- t1
-
-
+  
+  
   cat('\n     Tabela 2 - % gasto em alimentos', paste(Sys.time()))
-
+  
   # Percentual gasto em tipos de alimentos
   t2  <- f_alimentos_no_dom_2018(pof_svy, decis)
   t2b <- f_alimentos_no_dom_2018(pof_svy, um) #  %>% t()
   t2  <- left_join(t2, t2b, by = 'grupo' )
-
+  
   # Tabela 2
   lst.perc[[match(d, dimensoes)]] <- t2
-
-
+  
+  
   cat('\n     Tabela 3 - % gasto em alimentos fora do dom', paste(Sys.time()))
-
+  
   # Percentual gasto em tipos de alimentos fora do dom
   t3  <- f_alimentos_fora_dom_2018(pof_svy, decis)
   t3b <- f_alimentos_fora_dom_2018(pof_svy, um)
   t3  <- left_join(t3, t3b, by = 'grupo' )
-
+  
   # Tabela 3
   lst.fora.dom[[match(d, dimensoes)]] <- t3
-
-
+  
+  
   cat('\n     Tabela 4 - % gasto por tipo de processamento', paste(Sys.time()))
-
+  
   # Percentual gasto por tipo de processamento
   t4 <- f_tipo_process_2018(pof_svy, decis)
   t4b <- f_tipo_process_2018(pof_svy, um)
   t4  <- left_join(t4, t4b, by = 'grupo' )
-
+  
   # Tabela 4
   lst.proc[[match(d, dimensoes)]] <- t4
-
-
+  
+  
   cat('\n     Tabela 5 - Kcal consumido', paste(Sys.time()))
-
+  
   # Kcal consumido
   t5 <- f_consumo_kcal_2018(pof_svy, decis)
   t5b <- f_consumo_kcal_2018(pof_svy, um)
   t5  <- left_join(t5, t5b, by = 'grupo' )
-
+  
   # Tabela 5
   lst.kcal[[match(d, dimensoes)]] <- t5
-
+  
   t6 <- round(t4[-1]/t5[-1],2)
   t6 <- cbind(t4[,1], t6)
-
+  
   cat('\n     Tabela 6 - R$/Kcal consumido', paste(Sys.time()))
-
+  
   # Tabela 6: R$/Kcal consumido
   lst.reais.kcal[[match(d, dimensoes)]] <- t6
-
-
+  
+  
   # Tabela 7: Insegurança alimentar e intersecções
   lst.inseguranca[[match(d, dimensoes)]] <- f_inseguranca_2018(pof_svy)
-
+  
   
   ## Kg ----
   
@@ -300,9 +364,9 @@ for (d in dimensoes) {
   
   # Gastos com alimentação em relação ao orçamento
   t8 <- f_gasto_alimentacao_estrato_2018(df = pof_svy, estrato = get(d), region_name = d, year = 2018)
-
+  
   lst.food.expend[[match(d, dimensoes)]] <- t8
-
+  
   
   
 }
