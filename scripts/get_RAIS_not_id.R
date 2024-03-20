@@ -22,7 +22,7 @@ rm(list = c("install.lib", "lib", "load.lib"))
 
 # Caminho para os arquivos salvos
 rais_path <- 'E:/Drive/Projetos/Escolhas/2024/Consultoria de Dados/Dados Tratados/RAIS'
-
+dados_brutos_path <- 'E:/Drive/BASES DE DADOS BRUTOS/MAPAS/BRASIL'
 
 # Defina o seu projeto no Google Cloud
 cat("Enter your set_billing_id: ")
@@ -137,6 +137,28 @@ for (y in anos) {
 rais.painel <- bind_rows(lst.rais.painel)
   
 write.csv2(x = rais.painel,file.path(rais_path, 'rais_painel_2012_2021.csv'))
+
+
+
+# Municípios e regioes metropolitanas -------------------------------------
+
+# Construct the query
+query <- paste0('select * from `basedosdados.br_geobr_mapas.regiao_metropolitana_2017`')
+
+download(query = query, path = file.path(dados_brutos_path, paste0('REGIOES METROPOLITANAS/regioes_metropolitanas.csv' )))
+
+br_rm <- read.csv(file.path(dados_brutos_path, 'REGIOES METROPOLITANAS/regioes_metropolitanas.csv')) %>% select(nome_regiao_metropolitana, tipo, subcategoria_metropolitana, id_municipio, sigla_uf)
+
+
+
+
+unique(br_rm$tipo)
+
+unique(br_rm$sigla_uf)
+
+
+# Para fechar aqui temos que fazer uma função que dado o estado, pegamos a rm da capital
+
 
 
 
