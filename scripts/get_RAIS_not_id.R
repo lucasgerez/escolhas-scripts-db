@@ -152,9 +152,35 @@ br_rm <- read.csv(file.path(dados_brutos_path, 'REGIOES METROPOLITANAS/regioes_m
 
 
 
-unique(br_rm$tipo)
+get_rm_f <- function(mun, br_rm){
+  
+  # etapa 1: identifica se possui uma região metropolitana
+  
+  valid <- br_rm[br_rm$id_municipio == mun,]
+  
+  if ( nrow(valid) != 1 ) {
+    
+    warning('Não temos rm')
+    return(NA)
+    
+  } else {
+    
+    cat('Temos região metropolitana para a área!')
+    
+    rm_mun  <- br_rm[br_rm$nome_regiao_metropolitana == valid$nome_regiao_metropolitana,]
+    
+    return(rm_mun$id_municipio)
+    
+  }
+  
+}
 
-unique(br_rm$sigla_uf)
+
+curitiba <- 4106902
+rm <- get_rm_f(mun = curitiba, br_rm = br_rm)
+
+
+
 
 
 # Para fechar aqui temos que fazer uma função que dado o estado, pegamos a rm da capital
