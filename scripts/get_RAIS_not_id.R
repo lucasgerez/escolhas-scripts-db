@@ -145,12 +145,8 @@ write.csv2(x = rais.painel,file.path(rais_path, 'rais_painel_2012_2021.csv'))
 # Construct the query
 query <- paste0('select * from `basedosdados.br_geobr_mapas.regiao_metropolitana_2017`')
 
+# Base salva
 download(query = query, path = file.path(dados_brutos_path, paste0('REGIOES METROPOLITANAS/regioes_metropolitanas.csv' )))
-
-br_rm <- read.csv(file.path(dados_brutos_path, 'REGIOES METROPOLITANAS/regioes_metropolitanas.csv')) %>% select(nome_regiao_metropolitana, tipo, subcategoria_metropolitana, id_municipio, sigla_uf)
-
-
-
 
 get_rm_f <- function(mun, br_rm){
   
