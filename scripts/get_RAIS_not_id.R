@@ -22,7 +22,7 @@ rm(list = c("install.lib", "lib", "load.lib"))
 
 # Caminho para os arquivos salvos
 rais_path <- 'E:/Drive/Projetos/Escolhas/2024/Consultoria de Dados/Dados Tratados/RAIS'
-
+dados_brutos_path <- 'E:/Drive/BASES DE DADOS BRUTOS/MAPAS/BRASIL'
 
 # Defina o seu projeto no Google Cloud
 cat("Enter your set_billing_id: ")
@@ -137,6 +137,50 @@ for (y in anos) {
 rais.painel <- bind_rows(lst.rais.painel)
   
 write.csv2(x = rais.painel,file.path(rais_path, 'rais_painel_2012_2021.csv'))
+
+
+
+# Municípios e regioes metropolitanas -------------------------------------
+
+# Construct the query
+query <- paste0('select * from `basedosdados.br_geobr_mapas.regiao_metropolitana_2017`')
+
+# Base salva
+download(query = query, path = file.path(dados_brutos_path, paste0('REGIOES METROPOLITANAS/regioes_metropolitanas.csv' )))
+
+get_rm_f <- function(mun, br_rm){
+  
+  # etapa 1: identifica se possui uma região metropolitana
+  
+  valid <- br_rm[br_rm$id_municipio == mun,]
+  
+  if ( nrow(valid) != 1 ) {
+    
+    warning('Não temos rm')
+    return(NA)
+    
+  } else {
+    
+    cat('Temos região metropolitana para a área!')
+    
+    rm_mun  <- br_rm[br_rm$nome_regiao_metropolitana == valid$nome_regiao_metropolitana,]
+    
+    return(rm_mun$id_municipio)
+    
+  }
+  
+}
+
+
+curitiba <- 4106902
+rm <- get_rm_f(mun = curitiba, br_rm = br_rm)
+
+
+
+
+
+# Para fechar aqui temos que fazer uma função que dado o estado, pegamos a rm da capital
+
 
 
 
