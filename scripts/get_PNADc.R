@@ -20,18 +20,17 @@ rm(list = c("install.lib", "lib", "load.lib"))
 
 
 # Caminho dos scripts
-scripts.path <- 'C:/Users/user/Projetos_GIT/escolhas-scripts-db/scripts'
+scripts.path <- 'C:/Users/user/Documents/Projetos_github/escolhas-scripts-db/scripts'
 
 # Caminho dos arquivos
-pnad.path <- 'F:/Drive/BASES DE DADOS BRUTOS/PNAD_CONTÍNUA_IBGE/Anual/Raw_data_R'
+pnad.path <- 'E:/Drive/BASES DE DADOS BRUTOS/PNAD_CONTÍNUA_IBGE/Anual/Raw_data_R'
 
 # Caminho para a pnadc tratada
-save.path <- 'F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Dados/PNADc_tratada'
+save.path <- 'E:/Drive/Projetos/Escolhas/2024/Consultoria de Dados/Dados Tratados/PNADc'
 
 # Etapa 1: pegar a base completa da PNADc -----
 
 # Vamos gerar o conjunto de PNAD que temos informação para download
-
 anos   <- 2012:2023
 visita <- 1:5
 
