@@ -18,6 +18,7 @@ for( lib in install.lib ) install.packages( lib, dependencies = TRUE )
 sapply( load.lib, require, character = TRUE )
 rm(list = c("install.lib", "lib", "load.lib"))
 
+# Caminhos necessários -----
 
 # Caminho dos scripts
 scripts.path <- 'C:/Users/user/Documents/Projetos_github/escolhas-scripts-db/scripts'
@@ -28,10 +29,12 @@ pnad.path <- 'E:/Drive/BASES DE DADOS BRUTOS/PNAD_CONTÍNUA_IBGE/Anual/Raw_data_
 # Caminho para a pnadc tratada
 save.path <- 'E:/Drive/Projetos/Escolhas/2024/Consultoria de Dados/Dados Tratados/PNADc'
 
+
+
 # Etapa 1: pegar a base completa da PNADc -----
 
 # Vamos gerar o conjunto de PNAD que temos informação para download
-anos   <- 2012:2023
+anos   <- 2012:2022
 visita <- 1:5
 
 periodo <- expand.grid(anos, visita)
@@ -76,13 +79,11 @@ for (p in 1:nrow(periodo)) {
 
 # Etapa 2: tratar a base para o intuito do projeto ------
 
-# funcoes necessárias para o tratamento da base 
+## funcoes necessárias para o tratamento da base ------
 source(file.path(scripts.path, 'funcoes_pnadc.R'), encoding = 'UTF-8')
 
 
 ## Vamos então fazer o looping para tratar cada um dos anos ----
-
-# A princípio 2016 está dando algum problema com a variável sexo, checar
 
 # Vamos fazer uma lista para cada dimensão da pnad
 lst.ocupados       <- list()
@@ -96,8 +97,11 @@ for (y in years) {
   
   cat('\n\n\n\nPNADc ano:', y, paste0(Sys.time()), '\n\n\n')
   
+  # Visita 2 apenas para 2020 e 2021
+  if ( y %in% 2020:2021 ) { visita = 2 } else { visita = 1 }
+  
   # parte 1: abrindo a PNAD do ano
-  pnad <- trat_pnad(ano = y, visita = 1); gc()
+  pnad <- trat_pnad(ano = y, visita = visita); gc()
   
   
   for (state in estados) {

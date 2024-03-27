@@ -25,6 +25,7 @@ trat_pnad <- function(ano, visita) {
   # (Supermercado e Hipermercado) e 56.1 (Comércio Ambulante e Feiras);
   # Serviços alimentares: Divisão 56 (Alimentação) da Seção I (Alojamento e Alimentação)
   
+  cat('\nSelecionando as CNAEs de interesse ...')
   
   cnae1 <- data.frame(descricao = rep('Produção agropecuária. extrativa florestal pesca e aquicultura',32),
                       cnae = c('01101','01102','01103',
@@ -52,6 +53,7 @@ trat_pnad <- function(ano, visita) {
   
   df_cnae <- rbind(cnae1,cnae2,cnae3,cnae4); rm(cnae1,cnae2,cnae3,cnae4)
   
+  cat('\nLendo a PNAD ...')
   
   # Etapa 1: load da base
   pnad <- readRDS( file.path( pnad.path, paste0("pnad_anual_", ano, "_visita", visita, ".RDS")) )
@@ -89,6 +91,21 @@ trat_pnad <- function(ano, visita) {
                  "VD5007", # Renda dom total (habitual)
                  "VD5008" # Renda dom pc (habitual)
   )
+  
+  # Para 2020 e 2021 não temos VD5007 VD5008
+  if (ano %in% 2020:2021) { 
+    cat('\nPara 2020 e 2021 não temos VD5007 e VD5008. Utilizaremos VDI5007 e VDI5008, corrigindo o 99999999 para NA')
+    
+    # Retirando os casos de renda dom com info 99999999
+    pnad <- pnad %>% 
+      mutate(VD5007 = ifelse(VDI5007 == 99999999, NA,VDI5007),
+             VD5008 = ifelse(VDI5008 == 99999999, NA,VDI5008))
+      
+    
+    }
+  
+  
+  
   
   # Tal como na POF, vamos montar a nossa base a nível de domicílio e a partir disso fazer as contas
   pnad <- pnad[variaveis]; gc()
@@ -409,6 +426,3 @@ df_resultados$num_row <- 1:nrow(df_resultados)
 
 
 cat('\nFuncoes trat_pnad e tabelas_pnad e objeto df_resultados prontos para o uso!')
-
-
-cat('\n\n\nIMPORTANTE: FALTA COLOCAR 2020-2022 NO LOOPING')
