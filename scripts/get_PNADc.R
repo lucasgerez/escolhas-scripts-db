@@ -195,7 +195,7 @@ agro_raca_sexo <- bind_rows(lst.agro_raca_sexo)
 # Feito isso vamos salvar esses dados e depois tratar as tabelas para exportar
 
 save(list = c('ocupados', 'setor', 'cor_raca', 'agro_raca_sexo', 'ocup_agroali', 'estados'), 
-     file = file.path(save.path, 'pnadc_tratada.rdata') )  
+     file = file.path(save.path, 'pnadc_tratada.rdata'), version = 2, compress = T )  
 
 final <- Sys.time()
 
