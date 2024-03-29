@@ -67,35 +67,32 @@ tables_pnad_f <- function(uf) {
   
   # Bloco 2: ocupados agroalimentar
   
-  lst.pnad$ocupados_UF <- 
-    ocupados %>% 
+  lst.pnad$ocup_agroali_UF <- 
+    ocup_agroali %>% 
     filter(UF == uf, unidade_analise == 'UF')  %>%
     arrange(ano) %>%
-    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = ocupadas, values_from = c(total, prop)) # Proporção do agroalimentar tem intersecção com os demais ocupadoses
+    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = descricao, values_from = c(total, prop)) # Proporção do agroalimentar tem intersecção com os demais ocup_agroalies
   
-  lst.pnad$ocupados_RM <- 
-    ocupados %>% 
+  lst.pnad$ocup_agroali_RM <- 
+    ocup_agroali %>% 
     filter(UF == uf, unidade_analise == 'RM')  %>%
     arrange(ano) %>%
-    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = ocupadas, values_from = c(total, prop)) # Proporção do agroalimentar tem intersecção com os demais ocupadoses
+    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = descricao, values_from = c(total, prop)) # Proporção do agroalimentar tem intersecção com os demais ocup_agroalies
   
-  lst.pnad$ocupados_Cap <- 
-    ocupados %>% 
+  lst.pnad$ocup_agroali_Cap <- 
+    ocup_agroali %>% 
     filter(UF == uf, unidade_analise == 'Capital')  %>%
     arrange(ano) %>%
-    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = ocupadas, values_from = c(total, prop)) # Proporção do agroalimentar tem intersecção com os demais ocupadoses
+    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = descricao, values_from = c(total, prop)) # Proporção do agroalimentar tem intersecção com os demais ocup_agroalies
   
   
-  
-  
-  # Bloco 2: setor
+  # Bloco 3: setor
   
   lst.pnad$setor_UF <- 
     setor %>% 
     filter(UF == uf, unidade_analise == 'UF')  %>%
     arrange(ano) %>%
     pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = setor, values_from = c(rendimento, ocupados, prop)) # Proporção do agroalimentar tem intersecção com os demais setores
-  
   
   lst.pnad$setor_RM <- 
     setor %>% 
@@ -110,10 +107,36 @@ tables_pnad_f <- function(uf) {
     pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = setor, values_from = c(rendimento, ocupados, prop)) # Proporção do agroalimentar tem intersecção com os demais setores
   
   
+
+# PAREI AQUI --------------------------------------------------------------
+
+  
+  
+  # Bloco 3: cor / raça
+  
+  lst.pnad$cor_raca_UF <- 
+    cor_raca %>% 
+    filter(UF == uf, unidade_analise == 'UF')  %>%
+    arrange(ano) %>%
+    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = cor_raca, values_from = c(rendimento, ocupados, prop)) # Proporção do agroalimentar tem intersecção com os demais cor_racaes
+  
+  lst.pnad$cor_raca_RM <- 
+    cor_raca %>% 
+    filter(UF == uf, unidade_analise == 'RM')  %>%
+    arrange(ano) %>%
+    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = cor_raca, values_from = c(rendimento, ocupados, prop)) # Proporção do agroalimentar tem intersecção com os demais cor_racaes
+  
+  lst.pnad$cor_raca_Cap <- 
+    cor_raca %>% 
+    filter(UF == uf, unidade_analise == 'Capital')  %>%
+    arrange(ano) %>%
+    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = cor_raca, values_from = c(rendimento, ocupados, prop)) # Proporção do agroalimentar tem intersecção com os demais cor_racaes
   
   
   
-  head(ocupados)
+  
+  
+  head(cor_raca)
   
   
   
