@@ -37,12 +37,12 @@ load(file.path(save.path, 'pnadc_tratada.rdata'))
   # RM 
   # Capital
 
-uf = 'Paraná'
 
 tables_pnad_f <- function(uf) {
   
   lst.pnad <- list()
   
+  cat('\nBloco 1: ocupados\n')
   
   # Bloco 1: ocupados
   
@@ -65,6 +65,7 @@ tables_pnad_f <- function(uf) {
     pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = ocupadas, values_from = c(total, prop)) # Proporção do agroalimentar tem intersecção com os demais ocupadoses
   
   
+  cat('\nBloco 2: ocupados agroalimentar\n')
   # Bloco 2: ocupados agroalimentar
   
   lst.pnad$ocup_agroali_UF <- 
@@ -85,7 +86,7 @@ tables_pnad_f <- function(uf) {
     arrange(ano) %>%
     pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = descricao, values_from = c(total, prop)) # Proporção do agroalimentar tem intersecção com os demais ocup_agroalies
   
-  
+  cat('\nBloco 3: setor\n') 
   # Bloco 3: setor
   
   lst.pnad$setor_UF <- 
@@ -107,109 +108,18 @@ tables_pnad_f <- function(uf) {
     pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = setor, values_from = c(rendimento, ocupados, prop)) # Proporção do agroalimentar tem intersecção com os demais setores
   
   
-
 # PAREI AQUI --------------------------------------------------------------
 
+  cat('\nBloco 4: cor e raça \n') 
   
+  # Bloco 4: cor / raça
   
-  # Bloco 3: cor / raça
-  
-  lst.pnad$cor_raca_UF <- 
-    cor_raca %>% 
-    filter(UF == uf, unidade_analise == 'UF')  %>%
-    arrange(ano) %>%
-    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = cor_raca, values_from = c(rendimento, ocupados, prop)) # Proporção do agroalimentar tem intersecção com os demais cor_racaes
-  
-  lst.pnad$cor_raca_RM <- 
-    cor_raca %>% 
-    filter(UF == uf, unidade_analise == 'RM')  %>%
-    arrange(ano) %>%
-    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = cor_raca, values_from = c(rendimento, ocupados, prop)) # Proporção do agroalimentar tem intersecção com os demais cor_racaes
-  
-  lst.pnad$cor_raca_Cap <- 
-    cor_raca %>% 
-    filter(UF == uf, unidade_analise == 'Capital')  %>%
-    arrange(ano) %>%
-    pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = cor_raca, values_from = c(rendimento, ocupados, prop)) # Proporção do agroalimentar tem intersecção com os demais cor_racaes
-  
-  
-  
-  
-  
-  head(cor_raca)
-  
-  
-  
-  
-  lst.pnad$agro_raca_sexo_UF <- 
-    agro_raca_sexo %>% 
-    filter(UF == uf, unidade_analise == 'UF')  %>%
-    arrange(year) 
-  
-  lst.pnad$agro_raca_sexo_RM <- 
-    agro_raca_sexo %>% 
-    filter(UF == uf, unidade_analise == 'RM')  %>%
-    arrange(year) 
-  
-  lst.pnad$agro_raca_sexo_Cap <- 
-    agro_raca_sexo %>% 
-    filter(UF == uf, unidade_analise == 'Capital')  %>%
-    arrange(year) 
-  
-  
-  
-  
-  
-  # Tabela 1: total de empregos formais e por sexo (teste Curitiba)
-  lst.rais$df_sexo <- 
-    rais %>% 
-    filter(id_municipio %in% mun) %>% 
-    group_by(ano, sexo_str) %>% 
-    summarise(empregados = sum(total_empregado)/10^3, 
-              rem_media = weighted.mean(remuneracao_media,total_empregado)
-    ) %>% 
-    pivot_wider(id_cols = ano, names_from = sexo_str, values_from = c(empregados,rem_media))
-  
-  
-  lst.rais$df_sexo_agro <- 
-    rais %>% 
-    filter(id_municipio %in% mun, setor_agroalimentar == 1) %>% 
-    group_by(ano, sexo_str) %>% 
-    summarise(empregados = sum(total_empregado)/10^3, 
-              rem_media = weighted.mean(remuneracao_media,total_empregado)
-    ) %>% 
-    pivot_wider(id_cols = ano, names_from = sexo_str, values_from = c(empregados,rem_media))
-  
-  
-  # Vamos desconsiderar os não identificados para as contas de proporção
-  
-  warning('Vamos desconsiderar os não identificados para as contas de proporção')
-  
-  # Tabela 2: cor/raça
-  lst.rais$df_cor_raca <- 
-    rais %>% 
-    filter(id_municipio  %in% mun, raca_str  != 'nao_identificado' ) %>% 
-    group_by(ano, raca_str) %>% 
-    summarise(empregados = sum(total_empregado)/10^3, 
-              rem_media = weighted.mean(remuneracao_media,total_empregado)
-    ) %>%
-    ungroup() %>%
-    group_by(ano) %>% 
-    mutate(prop_raca = empregados/sum(empregados)) %>%
-    pivot_wider(id_cols = ano, names_from = raca_str, values_from = c(prop_raca,rem_media))
-  
-  
-  lst.rais$df_cor_raca_agro <- 
-    rais %>% 
-    filter(id_municipio  %in% mun, raca_str  != 'nao_identificado', setor_agroalimentar == 1 ) %>% 
-    group_by(ano, raca_str) %>% 
-    summarise(empregados = sum(total_empregado)/10^3, 
-              rem_media = weighted.mean(remuneracao_media,total_empregado)
-    ) %>%
-    ungroup() %>%
-    group_by(ano) %>% 
-    mutate(prop_raca = empregados/sum(empregados)) %>%
-    pivot_wider(id_cols = ano, names_from = raca_str, values_from = c(prop_raca,rem_media))
+  # lst.pnad$cor_raca_UF <- 
+  #   cor_raca %>% 
+  #   filter(UF == uf, unidade_analise == 'UF', cor_raca %in% c('Branca'))  %>%
+  #   arrange(ano) %>%
+  #   pivot_wider(id_cols = c(ano, unidade_analise, UF), names_from = cor_raca, values_from = c(rendimento, ocupados, prop)) # Proporção do agroalimentar tem intersecção com os demais cor_racaes
+  # 
   
   return(lst.pnad)
   
@@ -217,16 +127,9 @@ tables_pnad_f <- function(uf) {
 }
 
 
+parana <- tables_pnad_f(uf = 'Paraná')
 
-load(file.path(save.path, 'pnadc_tratada.rdata'))
-
-list.files(file.path(save.path))
-
-
-
-
-c('ocupados', 'setor', 'cor_raca', 'agro_raca_sexo', 'ocup_agroali', 'estados')
-
+write.xlsx(parana, file = file.path(result_path, 'Paraná_pnadc_tabelas.xlsx'))
 
 
 
