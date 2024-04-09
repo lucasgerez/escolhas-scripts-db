@@ -9,7 +9,8 @@
 
 
 # Pacotes
-load.lib <- c( "PNADcIBGE", "dplyr", "magrittr", "survey", 'tidyr' )
+load.lib <- c( "PNADcIBGE", "dplyr", "magrittr", 
+               "survey", 'tidyr', 'srvyr' )
 
 # Carregando os pacotes e instalando o que ainda não temos
 install.lib <- load.lib[ !load.lib %in% installed.packages() ]
@@ -29,12 +30,10 @@ pnad.path <- 'E:/Drive/BASES DE DADOS BRUTOS/PNAD_CONTÍNUA_IBGE/Anual/Raw_data_
 # Caminho para a pnadc tratada
 save.path <- 'E:/Drive/Projetos/Escolhas/2024/Consultoria de Dados/Dados Tratados/PNADc'
 
-
-
 # Etapa 1: pegar a base completa da PNADc -----
 
 # Vamos gerar o conjunto de PNAD que temos informação para download
-anos   <- 2012:2022
+anos   <- 2012:2023
 visita <- 1:5
 
 periodo <- expand.grid(anos, visita)
@@ -103,7 +102,7 @@ for (y in years) {
   # parte 1: abrindo a PNAD do ano
   pnad <- trat_pnad(ano = y, visita = visita); gc()
   
-  
+
   for (state in estados) {
     
     cat('\n\n Estado:', state)

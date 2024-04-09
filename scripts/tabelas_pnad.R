@@ -6,9 +6,7 @@
 # Esse script origina as tabelas da PNAD contínua para o estudo do IPPUC
 
 
-
 inicial <- Sys.time()
-
 
 # Pacotes
 load.lib <- c( "dplyr", "openxlsx", 'tidyr' )
