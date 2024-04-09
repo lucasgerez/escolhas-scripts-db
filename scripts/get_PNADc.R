@@ -39,9 +39,6 @@ visita <- 1:5
 periodo <- expand.grid(anos, visita)
 names(periodo) <- c('ano', 'visita')
 
-# # Vamos tentar pegar o visita 1 por enquanto
-# periodo <- periodo %>% filter(visita == 5, ano == 2023)
-
 for (p in 1:nrow(periodo)) {
   
   t0 <- Sys.time()
@@ -81,7 +78,6 @@ for (p in 1:nrow(periodo)) {
 ## funcoes necessárias para o tratamento da base ------
 source(file.path(scripts.path, 'funcoes_pnadc.R'), encoding = 'UTF-8')
 
-
 ## Vamos então fazer o looping para tratar cada um dos anos ----
 
 # Vamos fazer uma lista para cada dimensão da pnad
@@ -92,12 +88,12 @@ lst.cor.raca       <- list()
 lst.agro_raca_sexo <- list()
 
 # Está salvo até 2019, temos que identificar o que mudou depois
-for (y in years) {
+for (y in years) { # years 2020:2022
   
   cat('\n\n\n\nPNADc ano:', y, paste0(Sys.time()), '\n\n\n')
   
   # Visita 2 apenas para 2020 e 2021
-  if ( y %in% 2020:2021 ) { visita = 2 } else { visita = 1 }
+  if ( y %in% 2020:2022 ) { visita = 5 } else { visita = 1 }
   
   # parte 1: abrindo a PNAD do ano
   pnad <- trat_pnad(ano = y, visita = visita); gc()

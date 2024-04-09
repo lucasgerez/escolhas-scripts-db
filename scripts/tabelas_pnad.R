@@ -124,7 +124,6 @@ tables_pnad_f <- function(uf) {
   
 }
 
-
 parana <- tables_pnad_f(uf = 'Paraná')
 
 write.xlsx(parana, file = file.path(result_path, 'Paraná_pnadc_tabelas.xlsx'))

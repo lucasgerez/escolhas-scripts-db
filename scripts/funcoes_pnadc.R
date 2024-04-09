@@ -93,16 +93,16 @@ trat_pnad <- function(ano, visita) {
   )
   
   # Para 2020 e 2021 não temos VD5007 VD5008
-  if (ano %in% 2020:2021) { 
-    cat('\nPara 2020 e 2021 não temos VD5007 e VD5008. Utilizaremos VDI5007 e VDI5008, corrigindo o 99999999 para NA')
-    
-    # Retirando os casos de renda dom com info 99999999
-    pnad <- pnad %>% 
-      mutate(VD5007 = ifelse(VDI5007 == 99999999, NA,VDI5007),
-             VD5008 = ifelse(VDI5008 == 99999999, NA,VDI5008))
-      
-    
-  }
+  # if (ano %in% 2020:2021) { 
+  #   cat('\nPara 2020 e 2021 não temos VD5007 e VD5008. Utilizaremos VDI5007 e VDI5008, corrigindo o 99999999 para NA')
+  #   
+  #   # Retirando os casos de renda dom com info 99999999
+  #   pnad <- pnad %>% 
+  #     mutate(VD5007 = ifelse(VDI5007 == 99999999, NA,VDI5007),
+  #            VD5008 = ifelse(VDI5008 == 99999999, NA,VDI5008))
+  #     
+  #   
+  # }
   
   
   # Tal como na POF, vamos montar a nossa base a nível de domicílio e a partir disso fazer as contas
@@ -166,45 +166,13 @@ trat_pnad <- function(ano, visita) {
 tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
   
   cat('\n Tab1 Proporção de pessoas ocupadas')
-  
 
-# PAREI AQUI --------------------------------------------------------------
-
-  # Proporção de pessoas ocupadas na RM
-  # tab1 <- 
-  #   pnad_data %>%
-  #   filter(!is.na(ocupadas)) %>%
-  #   group_by(ocupadas) %>%
-  #   summarise(total = survey_count(peso_dom)) %>% 
-  #   mutate(prop = round(100*total/sum(total),2) )
-  
   tab1 <- 
     pnad %>%
     filter(!is.na(ocupadas), UF == state ) %>%
     group_by(ocupadas) %>%
     summarise(total = sum(peso_dom)) %>% 
     mutate(prop = round(100*total/sum(total),2) )
-  
-  sum(pnad[pnad$UF == state,]$peso_dom)/10^6
-  
-  
-
-# Investigação ------------------------------------------------------------
-
-  # no tocante a número de habitantes em 2022: cravamos (https://sidra.ibge.gov.br/tabela/6415#resultado)
-  sum(pnad[pnad$UF == state,]$peso_dom)/10^6  
-  
-  
-  # vamos tentar com o survey 
-  pnad_svy <- as_survey(svydesign(ids = ~UPA, 
-                                  strata = ~Estrato,
-                                  weights = ~peso_dom, 
-                                  data = pnad[pnad$UF == state,], 
-                                  check.strata = F))
-  
-  pnad_svy %>% 
-    filter(!is.na(ocupadas)) %>%
-    group_by(ocupadas) %>% summarise(prop = survey_prop())
   
   
   #
@@ -234,7 +202,6 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     mutate(prop = round(100*ocupados/sum(ocupados),2) ) %>%
     filter(sexo == 'Feminino') %>%
     select(prop)
-  
   
   
   #
