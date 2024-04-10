@@ -163,6 +163,7 @@ trat_pnad <- function(ano, visita) {
 
 # Geração das tabelas específicas para o estudo
 
+
 tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
   
   cat('\n Tab1 Proporção de pessoas ocupadas')
@@ -247,19 +248,23 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     pnad_data %>%
     filter(!is.na(ocupadas), !is.na(setor)) %>%
     group_by(setor) %>%
-    summarise(ocupados = sum(peso_dom)) %>% 
-    mutate(prop = round(100*ocupados/sum(ocupados),2) )
+    summarise(obs_valid = n(),
+              ocupados = ifelse(obs_valid >= 3, sum(peso_dom), NA)) %>% 
+    mutate(prop = round(100*ocupados/sum(ocupados, na.rm = T),2) ) %>% 
+    dplyr::select(-obs_valid)
   
   tab6_aux <- 
     pnad_data %>%
     filter(!is.na(ocupadas), !is.na(setor), d_agroalimentar == 1) %>%
-    summarise(ocupados = sum(peso_dom)) %>% 
-    mutate(prop = round(100*ocupados/sum(tab6$ocupados),2) )
+    summarise(obs_valid = n(),
+              ocupados = ifelse(obs_valid >= 3, sum(peso_dom), NA)) %>% 
+    mutate(prop = round(100*ocupados/sum(tab6$ocupados, na.rm = T),2) ) %>% 
+    dplyr::select(-obs_valid)
   
   
   tab6 <- rbind(tab6, 
                 data.frame(setor = "Agroalimentar", ocupados = tab6_aux$ocupados, prop = tab6_aux$prop),
-                data.frame(setor = "Total", ocupados = sum(tab6$ocupados), prop = 100))
+                data.frame(setor = "Total", ocupados = sum(tab6$ocupados, na.rm = T), prop = 100))
   
   # Evolução da ocupação e do salário médio por setores
   
@@ -269,20 +274,24 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     pnad_data %>% 
     filter(!is.na(setor)) %>%
     group_by(setor) %>%
-    summarise(rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T))
+    summarise(obs_valid = n(),
+              rendimento = ifelse(obs_valid >= 3, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) %>%
+    select(-obs_valid)
   
   # Renda média Agroalimentar
   tab7_aux <- 
     pnad_data %>% 
     filter(!is.na(setor), d_agroalimentar == 1) %>%
-    summarise(rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T))
-  
+    summarise(obs_valid = n(),
+              rendimento = ifelse(obs_valid >= 3, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) 
   
   # Renda média total
   tab7_aux2 <- 
     pnad_data %>% 
     filter(!is.na(setor)) %>%
-    summarise(rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T))
+    summarise(obs_valid = n(),
+              rendimento = ifelse(obs_valid >= 3, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) 
+  
   
   tab7 <- rbind(tab7, 
                 data.frame(setor = 'Agroalimentar', rendimento = tab7_aux$rendimento),
@@ -370,219 +379,6 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
   
   
 }
-
-
-
-# Versão anterior
-# tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
-#   
-#   cat('\n Tab1 Proporção de pessoas ocupadas')
-#   
-#   # Proporção de pessoas ocupadas na RM
-#   tab1 <- 
-#     pnad_data %>%
-#     filter(!is.na(ocupadas)) %>%
-#     group_by(ocupadas) %>%
-#     summarise(total = sum(peso_dom)) %>% 
-#     mutate(prop = round(100*total/sum(total),2) )
-#   
-#   
-#   #
-#   # TOTAL
-#   #
-#   
-#   cat('\n Tab2 Participação das pessoas brancas na força de trabalho')
-#   
-#   # Participação das pessoas brancas na força de trabalho
-#   tab2 <- 
-#     pnad_data %>%
-#     mutate(d_brancos = ifelse(cor_raca == 'Branca', 1, 0)) %>%
-#     filter(!is.na(ocupadas)) %>%
-#     group_by(d_brancos) %>%
-#     summarise(ocupados = sum(peso_dom)) %>% 
-#     mutate(prop = round(100*ocupados/sum(ocupados),2) ) %>%
-#     filter(d_brancos == 1) %>%
-#     select(prop)
-#   
-#   cat('\n Tab3 Participação das mulheres na força de trabalho')
-#   # Participação das mulheres na força de trabalho
-#   tab3 <- 
-#     pnad_data %>%
-#     filter(!is.na(ocupadas)) %>%
-#     group_by(sexo) %>%
-#     summarise(ocupados = sum(peso_dom)) %>% 
-#     mutate(prop = round(100*ocupados/sum(ocupados),2) ) %>%
-#     filter(sexo == 'Feminino') %>%
-#     select(prop)
-#   
-#   
-#   
-#   #
-#   # SETOR AGROALIMENTAR
-#   #
-#   
-#   cat('\n Tab4 Participação das pessoas brancas na força de trabalho no setor agroalimentar')
-#   # Participação das pessoas brancas na força de trabalho
-#   tab4 <- 
-#     pnad_data %>%
-#     mutate(d_brancos = ifelse(cor_raca == 'Branca', 1, 0)) %>%
-#     filter(!is.na(ocupadas), d_agroalimentar == 1 ) %>%
-#     group_by(d_brancos) %>%
-#     summarise(ocupados = sum(peso_dom)) %>% 
-#     mutate(prop = round(100*ocupados/sum(ocupados),2) ) %>%
-#     filter(d_brancos == 1) %>%
-#     select(prop)
-#   
-#   cat('\n Tab5 Participação das mulheres na força de trabalho')
-#   # Participação das mulheres na força de trabalho
-#   tab5 <- 
-#     pnad_data %>%
-#     filter(!is.na(ocupadas), d_agroalimentar == 1 ) %>%
-#     group_by(sexo) %>%
-#     summarise(ocupados = sum(peso_dom)) %>% 
-#     mutate(prop = round(100*ocupados/sum(ocupados),2) ) %>%
-#     filter(sexo == 'Feminino') %>%
-#     select(prop)
-#   
-#   
-#   tab_comp_raca_sexo <- data.frame(year = y, 
-#                                    UF = estado, 
-#                                    unidade_analise = unidade_analise,
-#                                    particip_brancos_total = tab2$prop,
-#                                    particip_brancos_agroali = tab4$prop,
-#                                    particip_mulheres_total = tab3$prop,
-#                                    particip_mulheres_agroali = tab5$prop)
-#   
-#   
-#   cat('\n Tab6 Ocupação por setor (percentual)')
-#   # Ocupação por setor (percentual)
-#   tab6 <- 
-#     pnad_data %>%
-#     filter(!is.na(ocupadas), !is.na(setor)) %>%
-#     group_by(setor) %>%
-#     summarise(ocupados = sum(peso_dom)) %>% 
-#     mutate(prop = round(100*ocupados/sum(ocupados),2) )
-#   
-#   tab6_aux <- 
-#     pnad_data %>%
-#     filter(!is.na(ocupadas), !is.na(setor), d_agroalimentar == 1) %>%
-#     summarise(ocupados = sum(peso_dom)) %>% 
-#     mutate(prop = round(100*ocupados/sum(tab6$ocupados),2) )
-#   
-#   
-#   tab6 <- rbind(tab6, 
-#                 data.frame(setor = "Agroalimentar", ocupados = tab6_aux$ocupados, prop = tab6_aux$prop),
-#                 data.frame(setor = "Total", ocupados = sum(tab6$ocupados), prop = 100))
-#   
-#   # Evolução da ocupação e do salário médio por setores
-#   
-#   cat('\n Tab7 salário médio por setores')
-#   # Se a gente souber o que constitui o agroalimentar é só acrescentar aqui
-#   tab7 <- 
-#     pnad_data %>% 
-#     filter(!is.na(setor)) %>%
-#     group_by(setor) %>%
-#     summarise(rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T))
-#   
-#   # Renda média Agroalimentar
-#   tab7_aux <- 
-#     pnad_data %>% 
-#     filter(!is.na(setor), d_agroalimentar == 1) %>%
-#     summarise(rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T))
-#   
-#   
-#   # Renda média total
-#   tab7_aux2 <- 
-#     pnad_data %>% 
-#     filter(!is.na(setor)) %>%
-#     summarise(rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T))
-#   
-#   tab7 <- rbind(tab7, 
-#                 data.frame(setor = 'Agroalimentar', rendimento = tab7_aux$rendimento),
-#                 data.frame(setor = 'Total', rendimento = tab7_aux2$rendimento))
-#   
-#   
-#   # Juncao da tab 2 e 3
-#   tab7 <- left_join(tab6, tab7, by = 'setor')
-#   
-#   
-#   # Salário por sexo 
-#   cat('\n Tab8 Salário por sexo')
-#   tab8 <- 
-#     pnad_data %>% 
-#     filter(ocupadas == 'Pessoas ocupadas') %>%
-#     group_by(sexo, cor_raca) %>%
-#     summarise(participacao = sum(peso_dom),
-#               sexo_rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T)) %>%
-#     mutate(participacao = participacao/sum(participacao)) %>%
-#     pivot_wider(names_from = sexo, values_from = c(participacao, sexo_rendimento)) %>%
-#     mutate(setor = 'Total')
-#   
-#   cat('\n Tab9 Agroalimentar')
-#   # Agroalimentar
-#   tab9 <- 
-#     pnad_data %>% 
-#     filter(ocupadas == 'Pessoas ocupadas') %>%
-#     filter(!is.na(setor), d_agroalimentar == 1) %>%
-#     group_by(sexo, cor_raca) %>%
-#     summarise(participacao = sum(peso_dom),
-#               sexo_rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T)) %>%
-#     mutate(participacao = participacao/sum(participacao)) %>% 
-#     pivot_wider(names_from = sexo, values_from = c(participacao, sexo_rendimento)) %>%
-#     mutate(setor = 'Agroalimentar')
-#   
-#  
-#   tab8 <- bind_rows(tab8, tab9)
-#   
-#   cat('\n Tab10 Ocupação no setor agroalimentar')
-#   # Ocupação no setor agroalimentar
-#   tab10 <- 
-#     pnad_data %>%
-#     filter(!is.na(ocupadas), d_agroalimentar == 1) %>%
-#     group_by(descricao) %>%
-#     summarise(total = sum(peso_dom)) %>% 
-#     mutate(prop = round(100*total/sum(total),2) )
-#   
-#   
-#   
-#   # Acrescentando as colunas de estado e unidade de análise
-#   tab1$UF = estado
-#   tab1$unidade_analise = unidade_analise
-#   tab1$ano = year
-#   tab1 <- tab1 %>% select(ano, UF, unidade_analise, ocupadas, total, prop )
-#   
-#   tab7$UF = estado
-#   tab7$unidade_analise = unidade_analise
-#   tab7$ano = year
-#   tab7 <- tab7 %>% select(ano, UF, unidade_analise, setor, ocupados, prop, rendimento )
-#   
-#   tab8$UF = estado
-#   tab8$unidade_analise = unidade_analise
-#   tab8$ano = year
-#   tab8 <- tab8 %>% select(ano, UF, unidade_analise, setor,
-#                           cor_raca, participacao_Masculino,
-#                           participacao_Feminino, 
-#                           sexo_rendimento_Masculino,
-#                           sexo_rendimento_Feminino )
-#   
-#   tab10$UF = estado
-#   tab10$unidade_analise = unidade_analise
-#   tab10$ano = year
-#   tab10 <- tab10 %>% select(ano, UF, unidade_analise, descricao, total, prop )
-#   
-#   
-#   # Resultados exportados
-#   lst <- list()
-#   lst$ocupadas <- tab1
-#   lst$setor_rendimento <- tab7
-#   lst$setor_sexo <- tab8
-#   lst$agro_raca_sexo <- tab_comp_raca_sexo
-#   lst$ocup_agroali <- tab10
-#   
-#   return(lst)
-#   
-#   
-# }
 
 
 # Dataframe com todas as combinações que conseguirmos
