@@ -40,36 +40,36 @@ periodo <- expand.grid(anos, visita)
 names(periodo) <- c('ano', 'visita')
 
 for (p in 1:nrow(periodo)) {
-  
+
   t0 <- Sys.time()
-  
-  cat('\nTentativa de obter a base anual da PNAD contínua\n  ANO', 
-      periodo[p,]$ano,  
+
+  cat('\nTentativa de obter a base anual da PNAD contínua\n  ANO',
+      periodo[p,]$ano,
       "\n  VISITA:", periodo[p,]$visita,
       '\n\n')
-  
-  
+
+
   pnad_lst <- get_pnadc(year = periodo[p,]$ano,
-                         interview = periodo[p,]$visita) 
-  
-  
-  pnad_file <- pnad_lst$variables 
-  
+                         interview = periodo[p,]$visita)
+
+
+  pnad_file <- pnad_lst$variables
+
   # salvando o arquivo de cada entrevista anual
   saveRDS(pnad_file,
-          file.path(pnad.path, 
-                    paste0('pnad_anual_', 
+          file.path(pnad.path,
+                    paste0('pnad_anual_',
                            periodo[p,]$ano, '_visita',
                            periodo[p,]$visita,
-                           ".RDS"))) 
-  
+                           ".RDS")))
+
   rm(list = c('pnad_lst', 'pnad_file'));gc()
-  
-  t1 <- Sys.time() 
-  
+
+  t1 <- Sys.time()
+
   cat(paste(t1 - t0))
-  
-  
+
+
 }
 
 

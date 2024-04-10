@@ -166,6 +166,8 @@ trat_pnad <- function(ano, visita) {
 
 tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
   
+  obs_consideradas <- 5
+  
   cat('\n Tab1 Proporção de pessoas ocupadas')
 
   tab1 <- 
@@ -249,7 +251,7 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     filter(!is.na(ocupadas), !is.na(setor)) %>%
     group_by(setor) %>%
     summarise(obs_valid = n(),
-              ocupados = ifelse(obs_valid >= 3, sum(peso_dom), NA)) %>% 
+              ocupados = ifelse(obs_valid >= obs_consideradas, sum(peso_dom), NA)) %>% 
     mutate(prop = round(100*ocupados/sum(ocupados, na.rm = T),2) ) %>% 
     dplyr::select(-obs_valid)
   
@@ -257,7 +259,7 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     pnad_data %>%
     filter(!is.na(ocupadas), !is.na(setor), d_agroalimentar == 1) %>%
     summarise(obs_valid = n(),
-              ocupados = ifelse(obs_valid >= 3, sum(peso_dom), NA)) %>% 
+              ocupados = ifelse(obs_valid >= obs_consideradas, sum(peso_dom), NA)) %>% 
     mutate(prop = round(100*ocupados/sum(tab6$ocupados, na.rm = T),2) ) %>% 
     dplyr::select(-obs_valid)
   
@@ -275,7 +277,7 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     filter(!is.na(setor)) %>%
     group_by(setor) %>%
     summarise(obs_valid = n(),
-              rendimento = ifelse(obs_valid >= 3, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) %>%
+              rendimento = ifelse(obs_valid >= obs_consideradas, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) %>%
     select(-obs_valid)
   
   # Renda média Agroalimentar
@@ -283,14 +285,14 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     pnad_data %>% 
     filter(!is.na(setor), d_agroalimentar == 1) %>%
     summarise(obs_valid = n(),
-              rendimento = ifelse(obs_valid >= 3, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) 
+              rendimento = ifelse(obs_valid >= obs_consideradas, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) 
   
   # Renda média total
   tab7_aux2 <- 
     pnad_data %>% 
     filter(!is.na(setor)) %>%
     summarise(obs_valid = n(),
-              rendimento = ifelse(obs_valid >= 3, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) 
+              rendimento = ifelse(obs_valid >= obs_consideradas, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) 
   
   
   tab7 <- rbind(tab7, 
