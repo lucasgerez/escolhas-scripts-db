@@ -140,7 +140,62 @@ export <- export[order(sort(names(export)))]
 write.xlsx(export, file = file.path(result_path, "rais_tabelas.xlsx"))
 
 
+# Looping para os demais estados ----
 
+estados <- c('Acre', 'Amapá', 'Amazonas', 'Goiás',
+             'Maranhão', 'Mato Grosso', 'Pará', 'Pernambuco',
+             'Rio de Janeiro', 'Rondônia', 'Tocantins')
+
+capitais <- c(1200401, 1600303, 1302603, 5208707,
+              2111300, 5103403, 1501402, 2611606, 
+              3304557, 1100205, 1721000)
+
+
+df_cities <- data.frame(estados, capitais)
+
+
+
+# PAREI AQUI --------------------------------------------------------------
+
+for (i in 1:nrow(df_cities)) {
+  
+  # Delimitações geográficas
+  cod_mun <- df_cities[i,]$capitais
+  rm_cod_mun <- get_rm_f(mun = cod_mun, br_rm = br_rm)
+  uf_cod_mun <- rais %>% mutate(UF = substring(id_municipio, 1,2)) %>% filter(UF %in% substring(cod_mun, 1,2)) %>% select(id_municipio) %>% unique() 
+  
+  
+  # Tabelas -----
+  capital <- tables_rais_f(mun = cod_mun, rais = rais)
+  
+  if ( is.na(rm_cod_mun)) {
+    
+    cat('\nNão temos informações de regiões metropolitanas neste estado')
+    
+    rm <- NA
+    
+  } else {
+    
+    rm  <-  tables_rais_f(mun = rm_cod_mun, rais = rais)
+    
+  }
+  
+  uf <- tables_rais_f(mun = uf_cod_mun, rais = rais)
+  
+  
+  # Exportando em excel ----- 
+  
+  names(capital) <- paste0(names(capital),'_Capital')
+  names(rm) <- paste0(names(rm),'_RM')
+  names(uf) <- paste0(names(uf),'_UF')
+  
+  export <- c(uf, rm, capital)
+  export <- export[order(sort(names(export)))]
+  
+  write.xlsx(export, file = file.path(result_path, paste0(df_cities[i,]$estados,"_rais_tabelas.xlsx")))
+  
+  
+}
 
 
 
