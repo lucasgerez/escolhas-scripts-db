@@ -129,9 +129,22 @@ parana <- tables_pnad_f(uf = 'Paraná')
 write.xlsx(parana, file = file.path(result_path, 'Paraná_pnadc_tabelas.xlsx'))
 
 
+# Feito isso, vamos tentar montar essa tabela para todos os estados de interesse
+
+estados <- c('Acre', 'Amapá', 'Amazonas', 'Goiás', 'Maranhão',
+             'Mato Grosso', 'Pará', 'Pernambuco', 'Rio de Janeiro', 
+             'Rondônia', 'Roraima', 'Tocantins')
 
 
-
+for (s in estados) {
+  
+  cat('\n\nEstado', s, '\n\n')
+  
+  state <- tables_pnad_f(uf = s)
+  
+  write.xlsx(state, file = file.path(result_path, paste0(s, '_pnadc_tabelas.xlsx')))
+  
+}
 
 
 
