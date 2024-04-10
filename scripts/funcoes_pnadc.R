@@ -93,18 +93,16 @@ trat_pnad <- function(ano, visita) {
   )
   
   # Para 2020 e 2021 não temos VD5007 VD5008
-  if (ano %in% 2020:2021) { 
-    cat('\nPara 2020 e 2021 não temos VD5007 e VD5008. Utilizaremos VDI5007 e VDI5008, corrigindo o 99999999 para NA')
-    
-    # Retirando os casos de renda dom com info 99999999
-    pnad <- pnad %>% 
-      mutate(VD5007 = ifelse(VDI5007 == 99999999, NA,VDI5007),
-             VD5008 = ifelse(VDI5008 == 99999999, NA,VDI5008))
-      
-    
-    }
-  
-  
+  # if (ano %in% 2020:2021) { 
+  #   cat('\nPara 2020 e 2021 não temos VD5007 e VD5008. Utilizaremos VDI5007 e VDI5008, corrigindo o 99999999 para NA')
+  #   
+  #   # Retirando os casos de renda dom com info 99999999
+  #   pnad <- pnad %>% 
+  #     mutate(VD5007 = ifelse(VDI5007 == 99999999, NA,VDI5007),
+  #            VD5008 = ifelse(VDI5008 == 99999999, NA,VDI5008))
+  #     
+  #   
+  # }
   
   
   # Tal como na POF, vamos montar a nossa base a nível de domicílio e a partir disso fazer as contas
@@ -149,8 +147,8 @@ trat_pnad <- function(ano, visita) {
                                          'Construção', 
                                          'Educação, saúde humana e serviços sociais', 
                                          'Informação, comunicação e atividades financeiras, imobiliárias, profissionais e administrativas', 
-                                         'Atividades mal definidas' ) ~ 'Serviços',---
-        atividade_estabelecimentos %in% c( 'Comércio, reparação de veículos automotores e motocicletas' ) ~ 'Comércio',
+                                         'Atividades mal definidas' ) ~ 'Serviços',
+      atividade_estabelecimentos %in% c( 'Comércio, reparação de veículos automotores e motocicletas' ) ~ 'Comércio',
       atividade_estabelecimentos %in% c( 'Indústria geral') ~ 'Indústria',
       atividade_estabelecimentos %in% c( 'Agricultura, pecuária, produção florestal, pesca e aquicultura') ~ 'Agricultura',
       atividade_estabelecimentos %in% c( 'Administração pública, defesa e seguridade social') ~ 'Adm. Pública',
@@ -164,14 +162,17 @@ trat_pnad <- function(ano, visita) {
 }
 
 # Geração das tabelas específicas para o estudo
+
+
 tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
   
-  cat('\n Tab1 Proporção de pessoas ocupadas')
+  obs_consideradas <- 5
   
-  # Proporção de pessoas ocupadas na RM
+  cat('\n Tab1 Proporção de pessoas ocupadas')
+
   tab1 <- 
-    pnad_data %>%
-    filter(!is.na(ocupadas)) %>%
+    pnad %>%
+    filter(!is.na(ocupadas), UF == state ) %>%
     group_by(ocupadas) %>%
     summarise(total = sum(peso_dom)) %>% 
     mutate(prop = round(100*total/sum(total),2) )
@@ -204,7 +205,6 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     mutate(prop = round(100*ocupados/sum(ocupados),2) ) %>%
     filter(sexo == 'Feminino') %>%
     select(prop)
-  
   
   
   #
@@ -250,19 +250,23 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     pnad_data %>%
     filter(!is.na(ocupadas), !is.na(setor)) %>%
     group_by(setor) %>%
-    summarise(ocupados = sum(peso_dom)) %>% 
-    mutate(prop = round(100*ocupados/sum(ocupados),2) )
+    summarise(obs_valid = n(),
+              ocupados = ifelse(obs_valid >= obs_consideradas, sum(peso_dom), NA)) %>% 
+    mutate(prop = round(100*ocupados/sum(ocupados, na.rm = T),2) ) %>% 
+    dplyr::select(-obs_valid)
   
   tab6_aux <- 
     pnad_data %>%
     filter(!is.na(ocupadas), !is.na(setor), d_agroalimentar == 1) %>%
-    summarise(ocupados = sum(peso_dom)) %>% 
-    mutate(prop = round(100*ocupados/sum(tab6$ocupados),2) )
+    summarise(obs_valid = n(),
+              ocupados = ifelse(obs_valid >= obs_consideradas, sum(peso_dom), NA)) %>% 
+    mutate(prop = round(100*ocupados/sum(tab6$ocupados, na.rm = T),2) ) %>% 
+    dplyr::select(-obs_valid)
   
   
   tab6 <- rbind(tab6, 
                 data.frame(setor = "Agroalimentar", ocupados = tab6_aux$ocupados, prop = tab6_aux$prop),
-                data.frame(setor = "Total", ocupados = sum(tab6$ocupados), prop = 100))
+                data.frame(setor = "Total", ocupados = sum(tab6$ocupados, na.rm = T), prop = 100))
   
   # Evolução da ocupação e do salário médio por setores
   
@@ -272,20 +276,24 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     pnad_data %>% 
     filter(!is.na(setor)) %>%
     group_by(setor) %>%
-    summarise(rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T))
+    summarise(obs_valid = n(),
+              rendimento = ifelse(obs_valid >= obs_consideradas, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) %>%
+    select(-obs_valid)
   
   # Renda média Agroalimentar
   tab7_aux <- 
     pnad_data %>% 
     filter(!is.na(setor), d_agroalimentar == 1) %>%
-    summarise(rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T))
-  
+    summarise(obs_valid = n(),
+              rendimento = ifelse(obs_valid >= obs_consideradas, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) 
   
   # Renda média total
   tab7_aux2 <- 
     pnad_data %>% 
     filter(!is.na(setor)) %>%
-    summarise(rendimento = weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T))
+    summarise(obs_valid = n(),
+              rendimento = ifelse(obs_valid >= obs_consideradas, weighted.mean(renda_trab_princ, w = peso_dom, na.rm = T), NA)) 
+  
   
   tab7 <- rbind(tab7, 
                 data.frame(setor = 'Agroalimentar', rendimento = tab7_aux$rendimento),
@@ -321,7 +329,7 @@ tabelas_pnad <- function(estado, unidade_analise, pnad_data, year ) {
     pivot_wider(names_from = sexo, values_from = c(participacao, sexo_rendimento)) %>%
     mutate(setor = 'Agroalimentar')
   
- 
+  
   tab8 <- bind_rows(tab8, tab9)
   
   cat('\n Tab10 Ocupação no setor agroalimentar')

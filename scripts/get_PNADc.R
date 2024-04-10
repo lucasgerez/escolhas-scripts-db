@@ -9,7 +9,8 @@
 
 
 # Pacotes
-load.lib <- c( "PNADcIBGE", "dplyr", "magrittr", "survey", 'tidyr' )
+load.lib <- c( "PNADcIBGE", "dplyr", "magrittr", 
+               "survey", 'tidyr', 'srvyr' )
 
 # Carregando os pacotes e instalando o que ainda não temos
 install.lib <- load.lib[ !load.lib %in% installed.packages() ]
@@ -29,51 +30,46 @@ pnad.path <- 'E:/Drive/BASES DE DADOS BRUTOS/PNAD_CONTÍNUA_IBGE/Anual/Raw_data_
 # Caminho para a pnadc tratada
 save.path <- 'E:/Drive/Projetos/Escolhas/2024/Consultoria de Dados/Dados Tratados/PNADc'
 
-
-
 # Etapa 1: pegar a base completa da PNADc -----
 
 # Vamos gerar o conjunto de PNAD que temos informação para download
-anos   <- 2012:2022
+anos   <- 2012:2023
 visita <- 1:5
 
 periodo <- expand.grid(anos, visita)
 names(periodo) <- c('ano', 'visita')
 
-# # Vamos tentar pegar o visita 1 por enquanto
-# periodo <- periodo %>% filter(visita == 5, ano == 2023)
-
 for (p in 1:nrow(periodo)) {
-  
+
   t0 <- Sys.time()
-  
-  cat('\nTentativa de obter a base anual da PNAD contínua\n  ANO', 
-      periodo[p,]$ano,  
+
+  cat('\nTentativa de obter a base anual da PNAD contínua\n  ANO',
+      periodo[p,]$ano,
       "\n  VISITA:", periodo[p,]$visita,
       '\n\n')
-  
-  
+
+
   pnad_lst <- get_pnadc(year = periodo[p,]$ano,
-                         interview = periodo[p,]$visita) 
-  
-  
-  pnad_file <- pnad_lst$variables 
-  
+                         interview = periodo[p,]$visita)
+
+
+  pnad_file <- pnad_lst$variables
+
   # salvando o arquivo de cada entrevista anual
   saveRDS(pnad_file,
-          file.path(pnad.path, 
-                    paste0('pnad_anual_', 
+          file.path(pnad.path,
+                    paste0('pnad_anual_',
                            periodo[p,]$ano, '_visita',
                            periodo[p,]$visita,
-                           ".RDS"))) 
-  
+                           ".RDS")))
+
   rm(list = c('pnad_lst', 'pnad_file'));gc()
-  
-  t1 <- Sys.time() 
-  
+
+  t1 <- Sys.time()
+
   cat(paste(t1 - t0))
-  
-  
+
+
 }
 
 
@@ -81,7 +77,6 @@ for (p in 1:nrow(periodo)) {
 
 ## funcoes necessárias para o tratamento da base ------
 source(file.path(scripts.path, 'funcoes_pnadc.R'), encoding = 'UTF-8')
-
 
 ## Vamos então fazer o looping para tratar cada um dos anos ----
 
@@ -93,17 +88,17 @@ lst.cor.raca       <- list()
 lst.agro_raca_sexo <- list()
 
 # Está salvo até 2019, temos que identificar o que mudou depois
-for (y in years) {
+for (y in years) { # years 2020:2022
   
   cat('\n\n\n\nPNADc ano:', y, paste0(Sys.time()), '\n\n\n')
   
   # Visita 2 apenas para 2020 e 2021
-  if ( y %in% 2020:2021 ) { visita = 2 } else { visita = 1 }
+  if ( y %in% 2020:2022 ) { visita = 5 } else { visita = 1 }
   
   # parte 1: abrindo a PNAD do ano
   pnad <- trat_pnad(ano = y, visita = visita); gc()
   
-  
+
   for (state in estados) {
     
     cat('\n\n Estado:', state)
@@ -195,7 +190,7 @@ agro_raca_sexo <- bind_rows(lst.agro_raca_sexo)
 # Feito isso vamos salvar esses dados e depois tratar as tabelas para exportar
 
 save(list = c('ocupados', 'setor', 'cor_raca', 'agro_raca_sexo', 'ocup_agroali', 'estados'), 
-     file = file.path(save.path, 'pnadc_tratada.rdata') )  
+     file = file.path(save.path, 'pnadc_tratada.rdata'), version = 2, compress = T )  
 
 final <- Sys.time()
 
