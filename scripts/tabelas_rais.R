@@ -153,22 +153,19 @@ capitais <- c(1200401, 1600303, 1302603, 5208707,
 
 df_cities <- data.frame(estados, capitais)
 
-
-
-# PAREI AQUI --------------------------------------------------------------
-
+# Looping 
 for (i in 1:nrow(df_cities)) {
   
   # Delimitações geográficas
   cod_mun <- df_cities[i,]$capitais
   rm_cod_mun <- get_rm_f(mun = cod_mun, br_rm = br_rm)
   uf_cod_mun <- rais %>% mutate(UF = substring(id_municipio, 1,2)) %>% filter(UF %in% substring(cod_mun, 1,2)) %>% select(id_municipio) %>% unique() 
-  
+  uf_cod_mun <- uf_cod_mun$id_municipio
   
   # Tabelas -----
   capital <- tables_rais_f(mun = cod_mun, rais = rais)
   
-  if ( is.na(rm_cod_mun)) {
+  if ( any(is.na(rm_cod_mun))) {
     
     cat('\nNão temos informações de regiões metropolitanas neste estado')
     
