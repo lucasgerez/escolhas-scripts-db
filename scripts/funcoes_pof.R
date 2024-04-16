@@ -45,32 +45,54 @@ get_estratos_f <- function(estrato) {
   
 }
 
-estratos <- read_excel(path = estratos_path, sheet = 'Plan3')
-
-lst.estratos <- list()
-
-for (linha in 1:nrow(estratos)) {
+gen_estratos_df_f <- function(estratos_path) {
   
-  estratos_aux <- get_estratos_f(estrato = estratos$capital[linha])
-  estratos_capital_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'capital', estratos = estratos_aux)
+  estratos <- read_excel(path = estratos_path, sheet = 'Plan3')
   
-  estratos_aux <- get_estratos_f(estrato = estratos$rm[linha])
-  estratos_rm_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'rm', estratos = estratos_aux)
+  lst.estratos <- list()
   
-  estratos_resto_uf_ref <- get_estratos_f(estrato = estratos$resto_uf[linha])
-  estratos_resto_uf_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'resto_uf_ref', estratos = estratos_aux)
+  for (linha in 1:nrow(estratos)) {
+    
+    # apenas os estratos da capital
+    estratos_cap_aux <- get_estratos_f(estrato = estratos$capital[linha])
+    estratos_capital_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'capital', estratos = estratos_cap_aux)
+    
+    # estratos de toda a RM (incluindo a capital): se só tiver da capital volta NA
+    estratos_rm_aux <- get_estratos_f(estrato = estratos$rm[linha])
+    
+    # UF sem rural
+    estratos_uf_aux <- get_estratos_f(estrato = estratos$resto_uf[linha])
+    
+    
+    if ( any(is.na(estratos_rm_aux))) {
+      
+      estratos_rm_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'rm', estratos = estratos_rm_aux)
+      estratos_uf_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'uf', estratos = c(estratos_cap_aux, estratos_uf_aux))
+      
+    } else {
+      
+      estratos_rm_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'rm', estratos = c(estratos_cap_aux, estratos_rm_aux))
+      estratos_uf_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'uf', estratos = c(estratos_cap_aux, estratos_rm_aux, estratos_uf_aux))
+      
+    }
+    
+    estratos_rural_aux <- get_estratos_f(estrato = estratos$rural[linha])
+    estratos_rural_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha],  regiao = 'rural', estratos = estratos_rural_aux)
+    
+    df_estratos <- bind_rows(estratos_capital_ref, estratos_rm_ref, estratos_uf_ref, estratos_rural_ref)
+    
+    lst.estratos[[linha]] <- df_estratos
+    
+    
+  }
   
-  estratos_aux <- get_estratos_f(estrato = estratos$rural[linha])
-  estratos_rural_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha],  regiao = 'rural_ref', estratos = estratos_aux)
+  df_estratos <- bind_rows(lst.estratos)
   
-  df_estratos <- bind_rows(estratos_capital_ref, estratos_rm_ref, estratos_resto_uf_ref, estratos_rural_ref)
-  
-  lst.estratos[[linha]] <- df_estratos
-  
+  return(df_estratos)
   
 }
 
-df_estratos <- bind_rows(lst.estratos)
+df_estratos <- gen_estratos_df_f(estratos_path = estratos_path)
 
 
 # Funcoes POF 2018 -------------------------------------------------
