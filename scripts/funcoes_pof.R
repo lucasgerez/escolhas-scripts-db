@@ -950,8 +950,6 @@ compila_tabelas_pof_f <- function(dimensoes, df_pof_2002_2008, df_pof_2018) {
       
       # Tabelas 
       
-      # Caso tenha apenas uma observação, vamos duplicá-la para não perder
-      
       # Incluindo a informação de decil e já filtrando para o estrato desejado
       pof_estrato <- f_xtile_filter_2002_2008(df_pof_2002_2008[df_pof_2002_2008$ano == y,], 
                                               variavel = "renda_per_capita",
@@ -1197,62 +1195,41 @@ compila_tabelas_pof_f <- function(dimensoes, df_pof_2002_2008, df_pof_2018) {
   
   # Exportando as tableas ----
   
-  # TEMOS QUE JUNTAR COM AS DE 2018
+  # Corrgindo os nomes para juntar na lista 
   
-  # Feito isso vamos exportar as tabelas (de 2002 a 2018)
+  corrige_nome_f <- function(year, original_colnames ){
+    
+    nomes <- names(original_colnames)
+    
+    nomes <- gsub('estratos_', '', nomes)
+    nomes <- gsub('_ref', '', nomes)
+    
+    nomes <- paste0(nomes,'_',year)
+    
+    return(nomes)
+    
+  }
   
-  leia.me <- data.frame( identificador = c('01','02'),
-                         nivel_geografico = c('Informações COM rural',
-                                              'Informações SEM rural'),
-                         unidade = c('Todas as unidades apresentadas correspondem a valores per capita calculados para o domicílio'))
+  names(lst.years$y_2002) <- corrige_nome_f(2002, original_colnames = lst.years$y_2002)
+  names(lst.years$y_2008) <- corrige_nome_f(2008, original_colnames = lst.years$y_2008)
+  names(lst.tab)          <- corrige_nome_f(2018, original_colnames = lst.tab)
+  names(lst.perc)         <- corrige_nome_f(2018, original_colnames = lst.perc)
+  names(lst.fora.dom)     <- corrige_nome_f(2018, original_colnames = lst.fora.dom)
+  names(lst.proc)         <- corrige_nome_f(2018, original_colnames = lst.proc)
+  names(lst.kg)           <- corrige_nome_f(2018, original_colnames = lst.kg)
+  names(lst.kcal)         <- corrige_nome_f(2018, original_colnames = lst.kcal)
+  names(lst.reais.kcal)   <- corrige_nome_f(2018, original_colnames = lst.reais.kcal)
+  names(lst.inseguranca)  <- corrige_nome_f(2018, original_colnames = lst.inseguranca)
   
-  #### tabela_orcamento_alim precisar ser exportada! 
+  # vamos juntar todas as tabelas em uma lista única
   
-  sheets <- list("leia_me" = leia.me,
-                 
-                 "tabela_orcamento_alim" = tabela_orcamento_alim,
-                 
-                 "desp_01_2002" = lst.years$y_2002$estrato_COM_rural, 
-                 "desp_02_2002" = lst.years$y_2002$estrato_SEM_rural,
-                 
-                 "desp_01_2008" = lst.years$y_2008$estrato_COM_rural, 
-                 "desp_02_2008" = lst.years$y_2008$estrato_SEM_rural,
-                 
-                 # Bloco 1: Despesas nos grandes grupos
-                 "desp_grupo_01_2018" = lst.tab$estrato_COM_rural, 
-                 "desp_grupo_02_2018" = lst.tab$estrato_SEM_rural,
-                 
-                 # Bloco 2: share por tipo de alimento
-                 "desp_alim_dom_01_2018" = as.data.frame(lst.perc$estrato_COM_rural), 
-                 "desp_alim_dom_02_2018" = lst.perc$estrato_SEM_rural,
-                 
-                 # Bloco 3: share por tipo de alimento FORA do domicilio
-                 "desp_alim_fora_dom_01_2018" = lst.fora.dom$estrato_COM_rural, 
-                 "desp_alim_fora_dom_02_2018" = lst.fora.dom$estrato_SEM_rural,
-                 
-                 # Bloco 4: share por tipo de processamento
-                 "desp_alim_tipo_proc_01_2018" = lst.proc$estrato_COM_rural, 
-                 "desp_alim_tipo_proc_02_2018" = lst.proc$estrato_SEM_rural,
-                 
-                 # consumo em kg por tipo de alimento
-                 "consumo_kg_01_2018" = lst.kg$estrato_COM_rural, 
-                 "consumo_kg_02_2018" = lst.kg$estrato_SEM_rural,
-                 
-                 # Bloco 5: share por tipo de processamento
-                 "consumo_perc_kcal_01_2018" = lst.kcal$estrato_COM_rural, 
-                 "consumo_perc_kcal_02_2018" = lst.kcal$estrato_SEM_rural,
-                 
-                 # Bloco 6: share por tipo de processamento
-                 "reais_por_kcal_01_2018" = lst.reais.kcal$estrato_COM_rural, 
-                 "reais_por_kcal_02_2018" = lst.reais.kcal$estrato_SEM_rural,
-                 
-                 # Bloco 7: insegurança alimentar
-                 "inseg_alim_01_2018" = lst.inseguranca$estrato_COM_rural, 
-                 "inseg_alim_02_2018" = lst.inseguranca$estrato_SEM_rural
-                 
-                 
-  )
+  list.orc <- list(tabela_orcamento_alim)
   
+  names(list.orc) <- 'tabela_orcamento_alim'
+  
+  sheets <- c(list.orc, lst.years$y_2002, lst.years$y_2008, 
+              lst.tab, lst.perc, lst.fora.dom, lst.proc, lst.kg,
+              lst.kcal, lst.reais.kcal, lst.inseguranca )
   
   return(sheets); gc()
   
