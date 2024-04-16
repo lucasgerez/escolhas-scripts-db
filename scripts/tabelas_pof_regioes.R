@@ -61,31 +61,31 @@ for (r in estados) {
 
 
 
-
-## Looping com as macrorregioes ---- 
-
-for (r in unique(df_estratos$macrorregiao)) {
-  
-  cat('\n\nMacrorregião:', r,"\n\n")
-  
-  estrato_COM_rural  <- df_estratos[is.na(df_estratos$estratos)==F & df_estratos$macrorregiao == r,]$estratos  
-  estrato_SEM_rural  <- df_estratos[is.na(df_estratos$estratos)==F & df_estratos$macrorregiao == r & df_estratos$regiao != 'rural_ref' ,]$estratos  
-  dimensoes <- c('estrato_COM_rural', 'estrato_SEM_rural')
-  
-  sheets <- compila_tabelas_pof_f(dimensoes = dimensoes, df_pof_2002_2008 = pof_res, df_pof_2018 = pof_2018)
-  write.xlsx(sheets, file = file.path(result_path, paste0(r,'_pof_tabelas.xlsx')))
-  
-  
-}
-
-
-
-
-
-##  Estratos do Brasil ----
-estrato_COM_rural  <- df_estratos[is.na(df_estratos$estratos)==F,]$estratos  
-estrato_SEM_rural  <- df_estratos[is.na(df_estratos$estratos)==F & df_estratos$regiao != 'rural_ref' ,]$estratos  
-dimensoes <- c('estrato_COM_rural', 'estrato_SEM_rural')
-
-sheets_br <- compila_tabelas_pof_f(dimensoes = dimensoes, df_pof_2002_2008 = pof_res, df_pof_2018 = pof_2018)
-write.xlsx(sheets_br, file = file.path(result_path, "Brasil_pof_tabelas.xlsx"))
+# 
+# ## Looping com as macrorregioes ---- 
+# 
+# for (r in unique(df_estratos$macrorregiao)) {
+#   
+#   cat('\n\nMacrorregião:', r,"\n\n")
+#   
+#   estrato_COM_rural  <- df_estratos[is.na(df_estratos$estratos)==F & df_estratos$macrorregiao == r,]$estratos  
+#   estrato_SEM_rural  <- df_estratos[is.na(df_estratos$estratos)==F & df_estratos$macrorregiao == r & df_estratos$regiao != 'rural_ref' ,]$estratos  
+#   dimensoes <- c('estrato_COM_rural', 'estrato_SEM_rural')
+#   
+#   sheets <- compila_tabelas_pof_f(dimensoes = dimensoes, df_pof_2002_2008 = pof_res, df_pof_2018 = pof_2018)
+#   write.xlsx(sheets, file = file.path(result_path, paste0(r,'_pof_tabelas.xlsx')))
+#   
+#   
+# }
+# 
+# 
+# 
+# 
+# 
+# ##  Estratos do Brasil ----
+# estrato_COM_rural  <- df_estratos[is.na(df_estratos$estratos)==F,]$estratos  
+# estrato_SEM_rural  <- df_estratos[is.na(df_estratos$estratos)==F & df_estratos$regiao != 'rural_ref' ,]$estratos  
+# dimensoes <- c('estrato_COM_rural', 'estrato_SEM_rural')
+# 
+# sheets_br <- compila_tabelas_pof_f(dimensoes = dimensoes, df_pof_2002_2008 = pof_res, df_pof_2018 = pof_2018)
+# write.xlsx(sheets_br, file = file.path(result_path, "Brasil_pof_tabelas.xlsx"))

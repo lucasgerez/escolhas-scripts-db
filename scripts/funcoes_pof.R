@@ -1197,35 +1197,45 @@ compila_tabelas_pof_f <- function(dimensoes, df_pof_2002_2008, df_pof_2018) {
   
   # Corrgindo os nomes para juntar na lista 
   
-  corrige_nome_f <- function(year, original_colnames ){
+  corrige_nome_f <- function(year, original_colnames, prefixo_novo_nome ){
     
     nomes <- names(original_colnames)
     
     nomes <- gsub('estratos_', '', nomes)
     nomes <- gsub('_ref', '', nomes)
-    
-    nomes <- paste0(nomes,'_',year)
+    nomes <- gsub('capital', 'cap', nomes)
+    nomes <- paste0(prefixo_novo_nome,'_',nomes,'_',year)
     
     return(nomes)
     
   }
   
-  names(lst.years$y_2002) <- corrige_nome_f(2002, original_colnames = lst.years$y_2002)
-  names(lst.years$y_2008) <- corrige_nome_f(2008, original_colnames = lst.years$y_2008)
-  names(lst.tab)          <- corrige_nome_f(2018, original_colnames = lst.tab)
-  names(lst.perc)         <- corrige_nome_f(2018, original_colnames = lst.perc)
-  names(lst.fora.dom)     <- corrige_nome_f(2018, original_colnames = lst.fora.dom)
-  names(lst.proc)         <- corrige_nome_f(2018, original_colnames = lst.proc)
-  names(lst.kg)           <- corrige_nome_f(2018, original_colnames = lst.kg)
-  names(lst.kcal)         <- corrige_nome_f(2018, original_colnames = lst.kcal)
-  names(lst.reais.kcal)   <- corrige_nome_f(2018, original_colnames = lst.reais.kcal)
-  names(lst.inseguranca)  <- corrige_nome_f(2018, original_colnames = lst.inseguranca)
+  names(lst.years$y_2002) <- corrige_nome_f(2002, original_colnames = lst.years$y_2002, prefixo_novo_nome = 'desp')
+  names(lst.years$y_2008) <- corrige_nome_f(2008, original_colnames = lst.years$y_2008, prefixo_novo_nome = 'desp')
+  names(lst.tab)          <- corrige_nome_f(2018, original_colnames = lst.tab, prefixo_novo_nome = 'desp_grupo')
+  names(lst.perc)         <- corrige_nome_f(2018, original_colnames = lst.perc, prefixo_novo_nome = 'desp_alim_dom' )
+  names(lst.fora.dom)     <- corrige_nome_f(2018, original_colnames = lst.fora.dom, prefixo_novo_nome = 'desp_alim_fora_dom')
+  names(lst.proc)         <- corrige_nome_f(2018, original_colnames = lst.proc, prefixo_novo_nome = 'desp_alim_tipo_proc')
+  names(lst.kg)           <- corrige_nome_f(2018, original_colnames = lst.kg, prefixo_novo_nome = 'consumo_kg')
+  names(lst.kcal)         <- corrige_nome_f(2018, original_colnames = lst.kcal, prefixo_novo_nome = 'consumo_perc_kcal')
+  names(lst.reais.kcal)   <- corrige_nome_f(2018, original_colnames = lst.reais.kcal, prefixo_novo_nome = 'reais_por_kcal')
+  names(lst.inseguranca)  <- corrige_nome_f(2018, original_colnames = lst.inseguranca, prefixo_novo_nome = 'inseg_alim')
   
   # vamos juntar todas as tabelas em uma lista única
   
   list.orc <- list(tabela_orcamento_alim)
   
   names(list.orc) <- 'tabela_orcamento_alim'
+  
+  
+  # # De-para dos nomes das abas com os identificadores
+  # leia.me <- data.frame( identificador = c('Primeira letra', 'Segunda letra', 'Terceira letra', '04','05', '06'),
+  #                        descricao = c('Grande grupo', ''
+  #                          
+  #                        ),
+  #                        unidade = c('D para despesa, C para consumo', ''))
+  # 
+  
   
   sheets <- c(list.orc, lst.years$y_2002, lst.years$y_2008, 
               lst.tab, lst.perc, lst.fora.dom, lst.proc, lst.kg,
