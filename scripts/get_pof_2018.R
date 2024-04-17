@@ -22,8 +22,9 @@ library(tidyr)
 
 
 # Diretório com as bases brutas
-setwd('F:/Drive/BASES DE DADOS BRUTOS/POF/POF 2017-2018/Microdados/Dados')
+setwd('E:/Drive/BASES DE DADOS BRUTOS/POF/POF 2017-2018/Microdados/Dados')
 
+git.path <- 'C:/Users/user/Documents/Projetos_github/escolhas-scripts-db/data'
 
 # 1. Tabelas de referência --------------------------------------
 
@@ -163,11 +164,22 @@ f_valor_mensal <- function(df, nome_var) {
              Descricao_5=="Outros" ~ 16
            ), 
            
-           grupo_alim_tipo = factor(grupo_alim_tipo, levels = 1:16, labels = c('cereais','tuberculos_raizes','alimentos_preparados',
-                                                                               'farinhas_e_massas','bebidas_e_infusoes','legumes_e_verduras',
-                                                                               'sal','frutas','acucares_e_derivados',
-                                                                               'carnes_e_pescados','enlatados','aves_e_ovos',
-                                                                               'leites_e_derivados','panificados','oleos_e_gorduras','outros') ),
+           grupo_alim_tipo = factor(grupo_alim_tipo, levels = 1:16, labels = c('cereais',
+                                                                               'tuberculos_raizes',
+                                                                               'alimentos_preparados',
+                                                                               'farinhas_e_massas',
+                                                                               'bebidas_e_infusoes',
+                                                                               'legumes_e_verduras',
+                                                                               'sal',
+                                                                               'frutas',
+                                                                               'acucares_e_derivados',
+                                                                               'carnes_e_pescados',
+                                                                               'enlatados',
+                                                                               'aves_e_ovos',
+                                                                               'leites_e_derivados',
+                                                                               'panificados',
+                                                                               'oleos_e_gorduras',
+                                                                               'outros') ),
            
            grupo_alim_fora_tipo = case_when(
              Descricao_5=="Almoço e jantar" ~ 1,
@@ -235,7 +247,7 @@ desp.nivel.3.monet <-
 desp.nivel.3.nao.monet <- 
   despesas_gerais %>%
   filter(!is.na(grupo_consumo)) %>%
-  filter(monetaria == 'monetaria') %>%
+  filter(monetaria == 'nao_monetaria') %>%
   group_by(across(all_of(c(var_dom, 'grupo_consumo'))))%>%
   summarise(desp_grupo = sum(desp, na.rm = TRUE))  %>%
   ungroup() %>% 
@@ -411,11 +423,22 @@ consumo_kg_grupos <- CONSUMO_ALIMENTAR %>%
   )) %>% 
   mutate(
     
-    grupo_alim_tipo = factor(grupo_alim_tipo, levels = 1:16, labels = c('cereais','tuberculos_raizes','alimentos_preparados',
-                                                                        'farinhas_e_massas','bebidas_e_infusoes','legumes_e_verduras',
-                                                                        'sal','frutas','acucares_e_derivados',
-                                                                        'carnes_e_pescados','enlatados','aves_e_ovos',
-                                                                        'leites_e_derivados','panificados','oleos_e_gorduras','outros') )
+    grupo_alim_tipo = factor(grupo_alim_tipo, levels = 1:16, labels = c('cereais',
+                                                                        'tuberculos_raizes',
+                                                                        'alimentos_preparados',
+                                                                        'farinhas_e_massas',
+                                                                        'bebidas_e_infusoes',
+                                                                        'legumes_e_verduras',
+                                                                        'sal','
+                                                                        frutas',
+                                                                        'acucares_e_derivados',
+                                                                        'carnes_e_pescados',
+                                                                        'enlatados',
+                                                                        'aves_e_ovos',
+                                                                        'leites_e_derivados',
+                                                                        'panificados',
+                                                                        'oleos_e_gorduras',
+                                                                        'outros') )
     
   ) %>% 
   mutate(
@@ -430,10 +453,14 @@ consumo_kg_grupos <- CONSUMO_ALIMENTAR %>%
       Descricao_5=="Cervejas, chopes e outras bebidas alcoólicas" ~ 7,
       Descricao_5=="Lanches" ~ 8
     ), 
-    grupo_alim_fora_tipo = factor(grupo_alim_fora_tipo, levels = 1:8, labels = c('almoco_e_jantar','outras','sanduiches_e_salgados',
-                                                                                 'alimentacao_light_diet','cafe_leite_choco',
+    grupo_alim_fora_tipo = factor(grupo_alim_fora_tipo, levels = 1:8, labels = c('almoco_e_jantar',
+                                                                                 'outras',
+                                                                                 'sanduiches_e_salgados',
+                                                                                 'alimentacao_light_diet',
+                                                                                 'cafe_leite_choco',
                                                                                  'refri_e_outras_nao_alcooicas', 
-                                                                                 'cervejas_e_outras_alcoólicas','lanches')), 
+                                                                                 'cervejas_e_outras_alcoólicas',
+                                                                                 'lanches')), 
     grupo_alim_tipo_process = factor(Grupo_Processado, levels = 1:4, labels = c('in_natura',
                                                                                 'ing_culinario',
                                                                                 'processado',
@@ -573,8 +600,6 @@ pof_2018 <- pof_2018 %>%
 
 
 # 6. Tabela Final ------------------------------------------------------------
-
-git.path <- 'C:/Users/user/Projetos_GIT/escolhas-scripts-db/data'
 
 saveRDS(pof_2018, file.path(git.path, "pof_fam_wide_2018.RDS")) 
 

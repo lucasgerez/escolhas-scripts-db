@@ -2,8 +2,6 @@
 
 # Tabelas POF para UFs 
 
-
-
 inicial <- Sys.time()
 
 ## Funções necessárias para as tabelas ----
@@ -23,10 +21,9 @@ pof_2018 <- readRDS( file.path( git_path, "data/pof_fam_wide_2018.RDS") )
 
 
 ## Looping para os estados de interesse ----
-
 estados <- c('Acre', 'Amapá', 'Amazonas', 'Goiás',
              'Maranhão', 'Mato Grosso', 'Pará', 'Pernambuco',
-             'Rio de Janeiro', 'Rondônia', 'Tocantins')
+             'Rio de Janeiro', 'Rondônia') # checar se vamos precisar de 'Tocantins'
 
 # Todos sem rural para fins de comparabilidade
 for (r in estados) {
