@@ -301,7 +301,7 @@ f_alimentos_kg_2018 <- function(df) {
   
   # Vamos substituir os missings por zero
   df$variables[is.na(df$variables)] <- 0
-  
+ 
   
   # Bloco 1: consumo de alimentos em kg
   df <- df %>%
@@ -310,7 +310,7 @@ f_alimentos_kg_2018 <- function(df) {
               tuberculos = (365/10^3)*survey_mean( pc_consumo_gr_dom_tuberculos_raizes,  na.rm = TRUE),
               acucares = (365/10^3)*survey_mean( pc_consumo_gr_dom_acucares_e_derivados,  na.rm = TRUE),
               verduras = (365/10^3)*survey_mean( pc_consumo_gr_dom_legumes_e_verduras,  na.rm = TRUE),
-              frutas = (365/10^3)*survey_mean( pc_consumo_gr_dom_frutas,  na.rm = TRUE),
+              # frutas = (365/10^3)*survey_mean( pc_consumo_gr_dom_frutas,  na.rm = TRUE),
               carnes_pescados = (365/10^3)*survey_mean( pc_consumo_gr_dom_carnes_e_pescados,  na.rm = TRUE),
               aves_ovos = (365/10^3)*survey_mean( pc_consumo_gr_dom_aves_e_ovos,  na.rm = TRUE),
               leites_derivados = (365/10^3)*survey_mean( pc_consumo_gr_dom_leites_e_derivados,  na.rm = TRUE),
