@@ -45,32 +45,54 @@ get_estratos_f <- function(estrato) {
   
 }
 
-estratos <- read_excel(path = estratos_path, sheet = 'Plan3')
-
-lst.estratos <- list()
-
-for (linha in 1:nrow(estratos)) {
+gen_estratos_df_f <- function(estratos_path) {
   
-  estratos_aux <- get_estratos_f(estrato = estratos$capital[linha])
-  estratos_capital_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'capital', estratos = estratos_aux)
+  estratos <- read_excel(path = estratos_path, sheet = 'Plan3')
   
-  estratos_aux <- get_estratos_f(estrato = estratos$rm[linha])
-  estratos_rm_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'rm', estratos = estratos_aux)
+  lst.estratos <- list()
   
-  estratos_resto_uf_ref <- get_estratos_f(estrato = estratos$resto_uf[linha])
-  estratos_resto_uf_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'resto_uf_ref', estratos = estratos_aux)
+  for (linha in 1:nrow(estratos)) {
+    
+    # apenas os estratos da capital
+    estratos_cap_aux <- get_estratos_f(estrato = estratos$capital[linha])
+    estratos_capital_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'capital', estratos = estratos_cap_aux)
+    
+    # estratos de toda a RM (incluindo a capital): se só tiver da capital volta NA
+    estratos_rm_aux <- get_estratos_f(estrato = estratos$rm[linha])
+    
+    # UF sem rural
+    estratos_uf_aux <- get_estratos_f(estrato = estratos$resto_uf[linha])
+    
+    
+    if ( any(is.na(estratos_rm_aux))) {
+      
+      estratos_rm_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'rm', estratos = estratos_rm_aux)
+      estratos_uf_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'uf', estratos = c(estratos_cap_aux, estratos_uf_aux))
+      
+    } else {
+      
+      estratos_rm_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'rm', estratos = c(estratos_cap_aux, estratos_rm_aux))
+      estratos_uf_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha], regiao = 'uf', estratos = c(estratos_cap_aux, estratos_rm_aux, estratos_uf_aux))
+      
+    }
+    
+    estratos_rural_aux <- get_estratos_f(estrato = estratos$rural[linha])
+    estratos_rural_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha],  regiao = 'rural', estratos = estratos_rural_aux)
+    
+    df_estratos <- bind_rows(estratos_capital_ref, estratos_rm_ref, estratos_uf_ref, estratos_rural_ref)
+    
+    lst.estratos[[linha]] <- df_estratos
+    
+    
+  }
   
-  estratos_aux <- get_estratos_f(estrato = estratos$rural[linha])
-  estratos_rural_ref <- data.frame(uf = estratos$UF[linha], macrorregiao = estratos$regiao[linha],  regiao = 'rural_ref', estratos = estratos_aux)
+  df_estratos <- bind_rows(lst.estratos)
   
-  df_estratos <- bind_rows(estratos_capital_ref, estratos_rm_ref, estratos_resto_uf_ref, estratos_rural_ref)
-  
-  lst.estratos[[linha]] <- df_estratos
-  
+  return(df_estratos)
   
 }
 
-df_estratos <- bind_rows(lst.estratos)
+df_estratos <- gen_estratos_df_f(estratos_path = estratos_path)
 
 
 # Funcoes POF 2018 -------------------------------------------------
@@ -279,7 +301,7 @@ f_alimentos_kg_2018 <- function(df) {
   
   # Vamos substituir os missings por zero
   df$variables[is.na(df$variables)] <- 0
-  
+ 
   
   # Bloco 1: consumo de alimentos em kg
   df <- df %>%
@@ -288,7 +310,7 @@ f_alimentos_kg_2018 <- function(df) {
               tuberculos = (365/10^3)*survey_mean( pc_consumo_gr_dom_tuberculos_raizes,  na.rm = TRUE),
               acucares = (365/10^3)*survey_mean( pc_consumo_gr_dom_acucares_e_derivados,  na.rm = TRUE),
               verduras = (365/10^3)*survey_mean( pc_consumo_gr_dom_legumes_e_verduras,  na.rm = TRUE),
-              frutas = (365/10^3)*survey_mean( pc_consumo_gr_dom_frutas,  na.rm = TRUE),
+              # frutas = (365/10^3)*survey_mean( pc_consumo_gr_dom_frutas,  na.rm = TRUE),
               carnes_pescados = (365/10^3)*survey_mean( pc_consumo_gr_dom_carnes_e_pescados,  na.rm = TRUE),
               aves_ovos = (365/10^3)*survey_mean( pc_consumo_gr_dom_aves_e_ovos,  na.rm = TRUE),
               leites_derivados = (365/10^3)*survey_mean( pc_consumo_gr_dom_leites_e_derivados,  na.rm = TRUE),
@@ -928,8 +950,6 @@ compila_tabelas_pof_f <- function(dimensoes, df_pof_2002_2008, df_pof_2018) {
       
       # Tabelas 
       
-      # Caso tenha apenas uma observação, vamos duplicá-la para não perder
-      
       # Incluindo a informação de decil e já filtrando para o estrato desejado
       pof_estrato <- f_xtile_filter_2002_2008(df_pof_2002_2008[df_pof_2002_2008$ano == y,], 
                                               variavel = "renda_per_capita",
@@ -1175,62 +1195,51 @@ compila_tabelas_pof_f <- function(dimensoes, df_pof_2002_2008, df_pof_2018) {
   
   # Exportando as tableas ----
   
-  # TEMOS QUE JUNTAR COM AS DE 2018
+  # Corrgindo os nomes para juntar na lista 
   
-  # Feito isso vamos exportar as tabelas (de 2002 a 2018)
+  corrige_nome_f <- function(year, original_colnames, prefixo_novo_nome ){
+    
+    nomes <- names(original_colnames)
+    
+    nomes <- gsub('estratos_', '', nomes)
+    nomes <- gsub('_ref', '', nomes)
+    nomes <- gsub('capital', 'cap', nomes)
+    nomes <- paste0(prefixo_novo_nome,'_',nomes,'_',year)
+    
+    return(nomes)
+    
+  }
   
-  leia.me <- data.frame( identificador = c('01','02'),
-                         nivel_geografico = c('Informações COM rural',
-                                              'Informações SEM rural'),
-                         unidade = c('Todas as unidades apresentadas correspondem a valores per capita calculados para o domicílio'))
+  names(lst.years$y_2002) <- corrige_nome_f(2002, original_colnames = lst.years$y_2002, prefixo_novo_nome = 'desp')
+  names(lst.years$y_2008) <- corrige_nome_f(2008, original_colnames = lst.years$y_2008, prefixo_novo_nome = 'desp')
+  names(lst.tab)          <- corrige_nome_f(2018, original_colnames = lst.tab, prefixo_novo_nome = 'desp_grupo')
+  names(lst.perc)         <- corrige_nome_f(2018, original_colnames = lst.perc, prefixo_novo_nome = 'desp_alim_dom' )
+  names(lst.fora.dom)     <- corrige_nome_f(2018, original_colnames = lst.fora.dom, prefixo_novo_nome = 'desp_alim_fora_dom')
+  names(lst.proc)         <- corrige_nome_f(2018, original_colnames = lst.proc, prefixo_novo_nome = 'desp_alim_tipo_proc')
+  names(lst.kg)           <- corrige_nome_f(2018, original_colnames = lst.kg, prefixo_novo_nome = 'consumo_kg')
+  names(lst.kcal)         <- corrige_nome_f(2018, original_colnames = lst.kcal, prefixo_novo_nome = 'consumo_perc_kcal')
+  names(lst.reais.kcal)   <- corrige_nome_f(2018, original_colnames = lst.reais.kcal, prefixo_novo_nome = 'reais_por_kcal')
+  names(lst.inseguranca)  <- corrige_nome_f(2018, original_colnames = lst.inseguranca, prefixo_novo_nome = 'inseg_alim')
   
-  #### tabela_orcamento_alim precisar ser exportada! 
+  # vamos juntar todas as tabelas em uma lista única
   
-  sheets <- list("leia_me" = leia.me,
-                 
-                 "tabela_orcamento_alim" = tabela_orcamento_alim,
-                 
-                 "desp_01_2002" = lst.years$y_2002$estrato_COM_rural, 
-                 "desp_02_2002" = lst.years$y_2002$estrato_SEM_rural,
-                 
-                 "desp_01_2008" = lst.years$y_2008$estrato_COM_rural, 
-                 "desp_02_2008" = lst.years$y_2008$estrato_SEM_rural,
-                 
-                 # Bloco 1: Despesas nos grandes grupos
-                 "desp_grupo_01_2018" = lst.tab$estrato_COM_rural, 
-                 "desp_grupo_02_2018" = lst.tab$estrato_SEM_rural,
-                 
-                 # Bloco 2: share por tipo de alimento
-                 "desp_alim_dom_01_2018" = as.data.frame(lst.perc$estrato_COM_rural), 
-                 "desp_alim_dom_02_2018" = lst.perc$estrato_SEM_rural,
-                 
-                 # Bloco 3: share por tipo de alimento FORA do domicilio
-                 "desp_alim_fora_dom_01_2018" = lst.fora.dom$estrato_COM_rural, 
-                 "desp_alim_fora_dom_02_2018" = lst.fora.dom$estrato_SEM_rural,
-                 
-                 # Bloco 4: share por tipo de processamento
-                 "desp_alim_tipo_proc_01_2018" = lst.proc$estrato_COM_rural, 
-                 "desp_alim_tipo_proc_02_2018" = lst.proc$estrato_SEM_rural,
-                 
-                 # consumo em kg por tipo de alimento
-                 "consumo_kg_01_2018" = lst.kg$estrato_COM_rural, 
-                 "consumo_kg_02_2018" = lst.kg$estrato_SEM_rural,
-                 
-                 # Bloco 5: share por tipo de processamento
-                 "consumo_perc_kcal_01_2018" = lst.kcal$estrato_COM_rural, 
-                 "consumo_perc_kcal_02_2018" = lst.kcal$estrato_SEM_rural,
-                 
-                 # Bloco 6: share por tipo de processamento
-                 "reais_por_kcal_01_2018" = lst.reais.kcal$estrato_COM_rural, 
-                 "reais_por_kcal_02_2018" = lst.reais.kcal$estrato_SEM_rural,
-                 
-                 # Bloco 7: insegurança alimentar
-                 "inseg_alim_01_2018" = lst.inseguranca$estrato_COM_rural, 
-                 "inseg_alim_02_2018" = lst.inseguranca$estrato_SEM_rural
-                 
-                 
-  )
+  list.orc <- list(tabela_orcamento_alim)
   
+  names(list.orc) <- 'tabela_orcamento_alim'
+  
+  
+  # # De-para dos nomes das abas com os identificadores
+  # leia.me <- data.frame( identificador = c('Primeira letra', 'Segunda letra', 'Terceira letra', '04','05', '06'),
+  #                        descricao = c('Grande grupo', ''
+  #                          
+  #                        ),
+  #                        unidade = c('D para despesa, C para consumo', ''))
+  # 
+  
+  
+  sheets <- c(list.orc, lst.years$y_2002, lst.years$y_2008, 
+              lst.tab, lst.perc, lst.fora.dom, lst.proc, lst.kg,
+              lst.kcal, lst.reais.kcal, lst.inseguranca )
   
   return(sheets); gc()
   

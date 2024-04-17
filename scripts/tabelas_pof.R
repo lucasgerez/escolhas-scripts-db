@@ -12,7 +12,7 @@
 
 ## Funções necessárias para as tabelas ----
 
-result_path       <- 'F:/Drive/Projetos/Escolhas/2023/Consultoria_Dados/Resultados/POF' # sempre checar se o caminho se mantém
+result_path       <- 'E:/Drive/Projetos/Escolhas/2024/Consultoria de Dados/Curitiba/POF' # sempre checar se o caminho se mantém
 estratos_path     <- 'E:/Drive/BASES DE DADOS BRUTOS/POF/POF 2017-2018/Microdados/Documentacao_20221226/Estratos POF 2017-2018.xls' # sempre checar se o caminho se mantém
 dados_brutos_path <- 'E:/Drive/BASES DE DADOS BRUTOS'
 
@@ -449,7 +449,6 @@ sheets <- list("leia_me" = leia.me,
 
 
 write.xlsx(sheets, file = file.path(result_path, "curitiba_pof_tabelas.xlsx"))
-
 
 
 final <- Sys.time()
