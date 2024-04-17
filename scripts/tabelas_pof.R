@@ -451,7 +451,6 @@ sheets <- list("leia_me" = leia.me,
 write.xlsx(sheets, file = file.path(result_path, "curitiba_pof_tabelas.xlsx"))
 
 
-
 final <- Sys.time()
 
 
