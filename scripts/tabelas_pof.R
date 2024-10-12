@@ -12,9 +12,12 @@
 
 ## Funções necessárias para as tabelas ----
 
+# Arquivos de insumo para as tabelas estão disponíveis no drive: https://drive.google.com/drive/folders/1gVz4WLaUekj7dSXGViBrJqXRTmOhKgsW?usp=sharing
+
+# Coloque os caminhos da sua máquina local aqui
 result_path       <- 'E:/Drive/Projetos/Escolhas/2024/Consultoria de Dados/Curitiba/POF' # sempre checar se o caminho se mantém
-estratos_path     <- 'E:/Drive/BASES DE DADOS BRUTOS/POF/POF 2017-2018/Microdados/Documentacao_20221226/Estratos POF 2017-2018.xls' # sempre checar se o caminho se mantém
-dados_brutos_path <- 'E:/Drive/BASES DE DADOS BRUTOS'
+estratos_path     <- 'E:/Backup_files/BASES DE DADOS BRUTOS/POF/POF 2017-2018/Microdados/Documentacao_20221226/Estratos POF 2017-2018.xls' # sempre checar se o caminho se mantém
+dados_brutos_path <- 'E:/Backup_files/BASES DE DADOS BRUTOS'
 
 # Caminho dos scripts na máquina local
 git_path <- 'C:/Users/user/Documents/Projetos_github/escolhas-scripts-db/'
